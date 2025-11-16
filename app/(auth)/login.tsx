@@ -1,4 +1,4 @@
-import FixedView from '@/components/custom/FixedView';
+import FixedView from '@/components/FixedView';
 import React from 'react';
 import { Text } from 'react-native';
 
