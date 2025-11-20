@@ -16,7 +16,7 @@ const FixedView = ({
 	const insets = useSafeAreaInsets();
 	return (
 		<React.Fragment>
-			<StatusBar style='auto' />
+			<StatusBar style='light' backgroundColor='transparent' />
 			<View
 				style={[
 					{ paddingTop: insets.top, paddingBottom: insets.bottom },
