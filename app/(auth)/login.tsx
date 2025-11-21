@@ -1,67 +1,114 @@
 import FixedView from '@/components/FixedView';
 import GradientButton from '@/components/GradientButton';
-import { useAuth } from '@/contexts/AuthContext';
+import Input from '@/components/Input';
+import {
+	LoginMutation,
+	LoginMutationVariables,
+} from '@/graphql/generated/types';
+import { LOGIN_MUTATION } from '@/graphql/mutations';
+import { useAppDispatch } from '@/store/hooks';
+import { setUser } from '@/store/slices/userSlice';
+import { convertGraphQLUser } from '@/utils/graphql-utils';
+import { useMutation } from '@apollo/client/react';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 const Login = () => {
-	const { login, isAuthenticated } = useAuth();
 	const router = useRouter();
+	const dispatch = useAppDispatch();
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
-	const [isLoading, setIsLoading] = useState(false);
+	const [emailError, setEmailError] = useState('');
+	const [passwordError, setPasswordError] = useState('');
 
-	// Redirect if already authenticated
-	React.useEffect(() => {
-		if (isAuthenticated) {
-			// This will be handled by ProtectedRoute, but we can redirect here too
-			router.replace('/(auth)/(onboarding)/first');
+	const [login, { loading }] = useMutation<
+		LoginMutation,
+		LoginMutationVariables
+	>(LOGIN_MUTATION, {
+		onCompleted: async (data) => {
+			try {
+				// Convert GraphQL User to Redux User format (handle null values)
+				const user = convertGraphQLUser(data.login.user);
+				dispatch(setUser(user));
+
+				// Small delay to ensure Redux state is updated
+				await new Promise((resolve) => setTimeout(resolve, 100));
+
+				// Navigate based on user role
+				if (user.role === 'coach') {
+					router.replace('/(coach)/dashboard');
+				} else if (user.role === 'member') {
+					router.replace('/(member)/dashboard');
+				} else {
+					router.replace('/(auth)/(onboarding)/first');
+				}
+			} catch (error) {
+				console.error('Navigation error:', error);
+				Alert.alert(
+					'Error',
+					'Failed to navigate after login. Please try again.'
+				);
+			}
+		},
+		onError: (error) => {
+			console.error('Login error:', error);
+			Alert.alert(
+				'Login Failed',
+				error.message || 'Please check your credentials and try again'
+			);
+		},
+	});
+
+	const validateForm = () => {
+		let isValid = true;
+		setEmailError('');
+		setPasswordError('');
+
+		if (!email.trim()) {
+			setEmailError('Email is required');
+			isValid = false;
+		} else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+			setEmailError('Please enter a valid email');
+			isValid = false;
 		}
-	}, [isAuthenticated, router]);
+
+		if (!password) {
+			setPasswordError('Password is required');
+			isValid = false;
+		} else if (password.length < 6) {
+			setPasswordError('Password must be at least 6 characters');
+			isValid = false;
+		}
+
+		return isValid;
+	};
 
 	const handleLogin = async () => {
-		if (!email || !password) {
-			Alert.alert('Error', 'Please enter both email and password');
+		if (!validateForm()) {
 			return;
 		}
 
-		setIsLoading(true);
 		try {
-			// TODO: Replace with actual API call to your GraphQL backend
-			// For now, this is a mock login that creates a test user
-			// You should integrate with your actual authentication API
-
-			// Mock user data - replace with actual API response
-			const mockUser = {
-				id: '1',
-				email: email,
-				firstName: 'John',
-				lastName: 'Doe',
-				role: email.includes('coach')
-					? ('coach' as const)
-					: ('member' as const),
-				onboardingCompleted: false,
-			};
-
-			await login(mockUser);
-
-			// Navigate to onboarding
-			router.replace('/(auth)/(onboarding)/first');
-		} catch (error) {
-			Alert.alert(
-				'Login Failed',
-				'Please check your credentials and try again'
-			);
-			console.error('Login error:', error);
-		} finally {
-			setIsLoading(false);
+			await login({
+				variables: {
+					input: {
+						email: email.trim(),
+						password,
+					},
+				},
+			});
+		} catch {
+			// Error is handled in onError callback
 		}
 	};
 
 	return (
 		<FixedView className='flex-1 bg-bg-darker'>
-			<View className='flex-1 justify-center px-5'>
+			<ScrollView
+				contentContainerClassName='flex-grow justify-center px-5 py-8'
+				keyboardShouldPersistTaps='handled'
+			>
 				<Text className='text-4xl font-bold mb-2.5 text-center text-text-primary'>
 					XTrimFit Gym
 				</Text>
@@ -70,37 +117,54 @@ const Login = () => {
 				</Text>
 
 				<View className='gap-4'>
-					<TextInput
-						className='border border-input rounded-lg p-4 text-base bg-input text-text-primary'
-						placeholder='Email'
-						placeholderTextColor='#6c757d'
+					<Input
+						label='Email'
+						placeholder='Enter your email'
 						value={email}
-						onChangeText={setEmail}
+						onChangeText={(text) => {
+							setEmail(text);
+							setEmailError('');
+						}}
 						keyboardType='email-address'
 						autoCapitalize='none'
 						autoComplete='email'
+						error={emailError}
 					/>
 
-					<TextInput
-						className='border border-input rounded-lg p-4 text-base bg-input text-text-primary'
-						placeholder='Password'
-						placeholderTextColor='#6c757d'
+					<Input
+						label='Password'
+						placeholder='Enter your password'
 						value={password}
-						onChangeText={setPassword}
+						onChangeText={(text) => {
+							setPassword(text);
+							setPasswordError('');
+						}}
 						secureTextEntry
 						autoCapitalize='none'
 						autoComplete='password'
+						error={passwordError}
 					/>
 
 					<GradientButton
 						onPress={handleLogin}
-						loading={isLoading}
+						loading={loading}
 						className='mt-2.5'
 					>
-						{isLoading ? 'Signing in...' : 'Sign In'}
+						{loading ? 'Logging in...' : 'Log in'}
 					</GradientButton>
+
+					<View className='mt-6 flex-row justify-center items-center'>
+						<Text className='text-text-secondary mr-2'>
+							Don&apos;t have an account yet?
+						</Text>
+						<TouchableOpacity
+							onPress={() => router.push('/(auth)/(onboarding)/first')}
+						>
+							<Text className='text-[#F9C513] font-semibold'>Sign up</Text>
+						</TouchableOpacity>
+					</View>
 				</View>
-			</View>
+			</ScrollView>
 		</FixedView>
 	);
 };

@@ -5,7 +5,9 @@ import {
 	ColorValue,
 	Pressable,
 	PressableProps,
+	StyleSheet,
 	Text,
+	View,
 } from 'react-native';
 
 interface GradientButtonProps extends Omit<PressableProps, 'children'> {
@@ -23,6 +25,7 @@ const GradientButton: React.FC<GradientButtonProps> = ({
 	disabled,
 	className = '',
 	textClassName = '',
+	style,
 	...pressableProps
 }) => {
 	// Gradient colors: red to yellow
@@ -32,28 +35,74 @@ const GradientButton: React.FC<GradientButtonProps> = ({
 		<Pressable
 			{...pressableProps}
 			disabled={disabled || loading}
-			className={`rounded-xl overflow-hidden ${className} ${
-				disabled || loading ? 'opacity-50' : ''
-			}`}
+			style={(state) => {
+				const styleValue = typeof style === 'function' ? style(state) : style;
+				return [
+					styles.pressable,
+					(disabled || loading) && styles.disabled,
+					styleValue,
+				].filter(Boolean);
+			}}
+			{...(className ? { className } : {})}
 		>
-			<LinearGradient
-				colors={gradientColors as [ColorValue, ColorValue]}
-				start={{ x: 0, y: 0 }}
-				end={{ x: 1, y: 1 }}
-				className='py-4 rounded-xl items-center justify-center'
-			>
-				{loading ? (
-					<ActivityIndicator size='small' color='#ffffff' />
-				) : (
-					<Text
-						className={`text-text-primary text-lg font-semibold ${textClassName}`}
-					>
-						{children}
-					</Text>
-				)}
-			</LinearGradient>
+			{variant === 'primary' ? (
+				<LinearGradient
+					colors={gradientColors as [ColorValue, ColorValue]}
+					start={{ x: 0, y: 0 }}
+					end={{ x: 1, y: 1 }}
+					style={styles.gradient}
+				>
+					{loading ? (
+						<ActivityIndicator size='small' color='#ffffff' />
+					) : (
+						<Text style={styles.text} className={textClassName}>
+							{children}
+						</Text>
+					)}
+				</LinearGradient>
+			) : (
+				<View style={styles.secondaryContainer}>
+					{loading ? (
+						<ActivityIndicator size='small' color='#ffffff' />
+					) : (
+						<Text style={styles.text} className={textClassName}>
+							{children}
+						</Text>
+					)}
+				</View>
+			)}
 		</Pressable>
 	);
 };
+
+const styles = StyleSheet.create({
+	pressable: {
+		borderRadius: 12,
+		overflow: 'hidden',
+	},
+	disabled: {
+		opacity: 0.5,
+	},
+	gradient: {
+		paddingVertical: 16,
+		borderRadius: 12,
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	secondaryContainer: {
+		paddingVertical: 16,
+		borderRadius: 12,
+		alignItems: 'center',
+		justifyContent: 'center',
+		backgroundColor: 'rgba(255, 255, 255, 0.04)',
+		borderWidth: 1,
+		borderColor: 'rgba(255, 255, 255, 0.1)',
+	},
+	text: {
+		color: '#ffffff',
+		fontSize: 18,
+		fontWeight: '600',
+	},
+});
 
 export default GradientButton;
