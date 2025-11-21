@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import {
-	View,
+	FlatList,
+	Modal,
+	StyleSheet,
 	Text,
 	TouchableOpacity,
-	Modal,
-	FlatList,
-	StyleSheet,
+	View,
 } from 'react-native';
 
 interface SelectOption {
@@ -36,7 +36,7 @@ const Select: React.FC<SelectProps> = ({
 	const selectedOption = options.find((opt) => opt.value === value);
 
 	return (
-		<View className={`mb-4 ${containerClassName}`}>
+		<View className={`mb-5 ${containerClassName}`}>
 			{label && (
 				<Text className='text-text-primary text-sm font-medium mb-2'>
 					{label}
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
 		justifyContent: 'flex-end',
 	},
 	modalContent: {
-		backgroundColor: '#1a1a1a',
+		backgroundColor: '#1C1C1E',
 		borderTopLeftRadius: 20,
 		borderTopRightRadius: 20,
 		maxHeight: '70%',
@@ -164,4 +164,3 @@ const styles = StyleSheet.create({
 });
 
 export default Select;
-

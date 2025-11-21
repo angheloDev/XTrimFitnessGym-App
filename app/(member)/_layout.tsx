@@ -1,9 +1,12 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
+import React from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const MemberLayout = () => {
+	const insets = useSafeAreaInsets();
+
 	return (
 		<ProtectedRoute allowedRoles={['member']}>
 			<Tabs
@@ -15,6 +18,9 @@ const MemberLayout = () => {
 						backgroundColor: '#1C1C1E',
 						borderTopColor: '#2C2C2E',
 						borderTopWidth: 1,
+						paddingTop: 8,
+						paddingBottom: Math.max(insets.bottom, 12),
+						height: 60 + Math.max(insets.bottom, 12) - 8,
 					},
 					tabBarLabelStyle: {
 						fontSize: 12,
@@ -23,20 +29,15 @@ const MemberLayout = () => {
 				}}
 			>
 				<Tabs.Screen
-					name='schedule'
+					name='dashboard'
 					options={{
-						title: 'Schedule',
-						tabBarIcon: ({ color, size }) => (
-							<Ionicons name='calendar' size={size} color={color} />
-						),
-					}}
-				/>
-				<Tabs.Screen
-					name='progress'
-					options={{
-						title: 'Progress',
-						tabBarIcon: ({ color, size }) => (
-							<Ionicons name='trending-up' size={size} color={color} />
+						title: 'Dashboard',
+						tabBarIcon: ({ color, size, focused }) => (
+							<Ionicons
+								name={focused ? 'stats-chart' : 'stats-chart-outline'}
+								size={size}
+								color={color}
+							/>
 						),
 					}}
 				/>
@@ -44,18 +45,57 @@ const MemberLayout = () => {
 					name='subscription'
 					options={{
 						title: 'Subscription',
-						tabBarIcon: ({ color, size }) => (
-							<Ionicons name='card' size={size} color={color} />
+						tabBarIcon: ({ color, size, focused }) => (
+							<Ionicons
+								name={focused ? 'card' : 'card-outline'}
+								size={size}
+								color={color}
+							/>
 						),
 					}}
 				/>
 				<Tabs.Screen
-					name='dashboard'
+					name='progress'
 					options={{
-						title: 'Dashboard',
-						tabBarIcon: ({ color, size }) => (
-							<Ionicons name='stats-chart' size={size} color={color} />
+						title: 'Progress',
+						tabBarIcon: ({ color, size, focused }) => (
+							<Ionicons
+								name={focused ? 'trending-up' : 'trending-up-outline'}
+								size={size}
+								color={color}
+							/>
 						),
+					}}
+				/>
+				<Tabs.Screen
+					name='schedule'
+					options={{
+						title: 'Schedule',
+						tabBarIcon: ({ color, size, focused }) => (
+							<Ionicons
+								name={focused ? 'calendar' : 'calendar-outline'}
+								size={size}
+								color={color}
+							/>
+						),
+					}}
+				/>
+				<Tabs.Screen
+					name='profile'
+					options={{
+						href: null,
+					}}
+				/>
+				<Tabs.Screen
+					name='coaches'
+					options={{
+						href: null,
+					}}
+				/>
+				<Tabs.Screen
+					name='workouts'
+					options={{
+						href: null,
 					}}
 				/>
 			</Tabs>
@@ -64,4 +104,3 @@ const MemberLayout = () => {
 };
 
 export default MemberLayout;
-

@@ -1,30 +1,30 @@
+import DatePicker from '@/components/DatePicker';
 import FixedView from '@/components/FixedView';
 import GradientButton from '@/components/GradientButton';
 import Input from '@/components/Input';
 import Select from '@/components/Select';
+import TabHeader from '@/components/TabHeader';
 import { useAuth } from '@/contexts/AuthContext';
-import DatePicker from '@/components/DatePicker';
 import {
-	CREATE_SESSION_MUTATION,
 	CANCEL_SESSION_MUTATION,
-	CONFIRM_SESSION_COMPLETION_MUTATION,
+	CREATE_SESSION_MUTATION,
 } from '@/graphql/mutations';
 import {
 	GET_COACH_SESSIONS_QUERY,
 	GET_UPCOMING_SESSIONS_QUERY,
 } from '@/graphql/queries';
 import { useMutation, useQuery } from '@apollo/client/react';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
 	Alert,
+	FlatList,
+	Modal,
 	ScrollView,
 	Text,
 	TouchableOpacity,
 	View,
-	Modal,
-	FlatList,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
 const gymAreas = [
 	{ label: 'Main Training Area', value: 'Main Training Area' },
@@ -140,20 +140,19 @@ const CoachSchedule = () => {
 
 	return (
 		<FixedView className='flex-1 bg-bg-darker'>
+			<TabHeader showCoachIcon={false} />
 			<ScrollView
 				className='flex-1'
 				contentContainerClassName='p-5'
 				showsVerticalScrollIndicator={false}
 			>
 				<View className='flex-row justify-between items-center mb-6'>
-					<Text className='text-3xl font-bold text-text-primary'>
-						Schedule
-					</Text>
+					<Text className='text-3xl font-bold text-text-primary'>Schedule</Text>
 					<GradientButton
 						onPress={() => setShowCreateModal(true)}
-						className='px-4 py-2'
+						className='px-4 py-2 h-17 w-30'
 					>
-						<Ionicons name='add' size={20} color='#fff' />
+						<Ionicons name='add' size={30} color='#fff' />
 					</GradientButton>
 				</View>
 
@@ -334,4 +333,3 @@ const CoachSchedule = () => {
 };
 
 export default CoachSchedule;
-

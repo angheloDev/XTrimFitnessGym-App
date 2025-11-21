@@ -1,37 +1,46 @@
 import FixedView from '@/components/FixedView';
-import { useAuth } from '@/contexts/AuthContext';
-import { GET_USERS_QUERY } from '@/graphql/queries';
-import { GET_WEIGHT_PROGRESS_CHART_QUERY } from '@/graphql/queries';
+import TabHeader from '@/components/TabHeader';
+import {
+	GetUsersQuery,
+	GetUsersQueryVariables,
+	GetWeightProgressChartQuery,
+	GetWeightProgressChartQueryVariables,
+} from '@/graphql/generated/types';
+import {
+	GET_USERS_QUERY,
+	GET_WEIGHT_PROGRESS_CHART_QUERY,
+} from '@/graphql/queries';
 import { useQuery } from '@apollo/client/react';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
+	FlatList,
+	Modal,
 	ScrollView,
 	Text,
-	View,
-	FlatList,
 	TouchableOpacity,
-	Modal,
+	View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import Select from '@/components/Select';
 
 const CoachProgress = () => {
-	const { user } = useAuth();
 	const [selectedClient, setSelectedClient] = useState<any>(null);
 	const [showClientProgress, setShowClientProgress] = useState(false);
 
-	const { data: clientsData } = useQuery(GET_USERS_QUERY, {
-		variables: { role: 'member' },
-		fetchPolicy: 'cache-and-network',
-	});
-
-	const { data: progressData } = useQuery(
-		GET_WEIGHT_PROGRESS_CHART_QUERY,
+	const { data: clientsData } = useQuery<GetUsersQuery, GetUsersQueryVariables>(
+		GET_USERS_QUERY,
 		{
-			variables: { clientId: selectedClient?.id },
-			skip: !selectedClient || !showClientProgress,
+			variables: { role: 'member' },
+			fetchPolicy: 'cache-and-network',
 		}
 	);
+
+	const { data: progressData } = useQuery<
+		GetWeightProgressChartQuery,
+		GetWeightProgressChartQueryVariables
+	>(GET_WEIGHT_PROGRESS_CHART_QUERY, {
+		variables: { clientId: selectedClient?.id || '' },
+		skip: !selectedClient || !showClientProgress,
+	});
 
 	const clients = clientsData?.getUsers || [];
 	const progressPoints = progressData?.getWeightProgressChart || [];
@@ -63,8 +72,7 @@ const CoachProgress = () => {
 					{clientProgress.map((point: any, index: number) => {
 						const normalizedWeight = (point.weight - minWeight) / range;
 						const y = chartHeight - normalizedWeight * chartHeight;
-						const x =
-							(index / (clientProgress.length - 1 || 1)) * chartWidth;
+						const x = (index / (clientProgress.length - 1 || 1)) * chartWidth;
 
 						return (
 							<View
@@ -96,6 +104,7 @@ const CoachProgress = () => {
 
 	return (
 		<FixedView className='flex-1 bg-bg-darker'>
+			<TabHeader showCoachIcon={false} />
 			<ScrollView
 				className='flex-1'
 				contentContainerClassName='p-5'
@@ -107,7 +116,7 @@ const CoachProgress = () => {
 							Client Progress
 						</Text>
 						<Text className='text-text-secondary mt-1'>
-							Track your clients' progress
+							Track your clients&apos; progress
 						</Text>
 					</View>
 					<Ionicons name='trending-up' size={32} color='#F9C513' />
@@ -126,33 +135,36 @@ const CoachProgress = () => {
 				) : (
 					<FlatList
 						data={clients}
-						keyExtractor={(item) => item.id}
+						keyExtractor={(item) => item?.id || ''}
 						scrollEnabled={false}
-						renderItem={({ item }) => (
-							<TouchableOpacity
-								onPress={() => {
-									setSelectedClient(item);
-									setShowClientProgress(true);
-								}}
-								className='bg-bg-primary rounded-xl p-4 mb-3'
-							>
-								<View className='flex-row items-center justify-between'>
-									<View className='flex-1'>
-										<Text className='text-text-primary font-semibold text-lg mb-1'>
-											{item.firstName} {item.lastName}
-										</Text>
-										<Text className='text-text-secondary text-sm'>
-											{item.email}
-										</Text>
+						renderItem={({ item }) => {
+							if (!item) return null;
+							return (
+								<TouchableOpacity
+									onPress={() => {
+										setSelectedClient(item);
+										setShowClientProgress(true);
+									}}
+									className='bg-bg-primary rounded-xl p-4 mb-3'
+								>
+									<View className='flex-row items-center justify-between'>
+										<View className='flex-1'>
+											<Text className='text-text-primary font-semibold text-lg mb-1'>
+												{item.firstName} {item.lastName}
+											</Text>
+											<Text className='text-text-secondary text-sm'>
+												{item.email}
+											</Text>
+										</View>
+										<Ionicons
+											name='chevron-forward'
+											size={24}
+											color='#8E8E93'
+										/>
 									</View>
-									<Ionicons
-										name='chevron-forward'
-										size={24}
-										color='#8E8E93'
-									/>
-								</View>
-							</TouchableOpacity>
-						)}
+								</TouchableOpacity>
+							);
+						}}
 					/>
 				)}
 			</ScrollView>
@@ -171,7 +183,8 @@ const CoachProgress = () => {
 					<View className='bg-bg-primary rounded-2xl p-6 max-h-[80%]'>
 						<View className='flex-row justify-between items-center mb-4'>
 							<Text className='text-2xl font-bold text-text-primary'>
-								{selectedClient?.firstName} {selectedClient?.lastName}'s Progress
+								{selectedClient?.firstName} {selectedClient?.lastName}&apos;s
+								Progress
 							</Text>
 							<TouchableOpacity
 								onPress={() => {
@@ -215,4 +228,3 @@ const CoachProgress = () => {
 };
 
 export default CoachProgress;
-

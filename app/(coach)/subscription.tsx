@@ -1,4 +1,5 @@
 import FixedView from '@/components/FixedView';
+import TabHeader from '@/components/TabHeader';
 import { GET_CURRENT_MEMBERSHIP_QUERY } from '@/graphql/queries';
 import { useQuery } from '@apollo/client/react';
 import React from 'react';
@@ -22,6 +23,7 @@ const CoachSubscription = () => {
 
 	return (
 		<FixedView className='flex-1 bg-bg-darker'>
+			<TabHeader showCoachIcon={false} />
 			<ScrollView
 				className='flex-1'
 				contentContainerClassName='p-5'

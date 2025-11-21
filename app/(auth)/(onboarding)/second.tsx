@@ -1,11 +1,11 @@
 import FixedView from '@/components/FixedView';
 import GradientButton from '@/components/GradientButton';
-import Select from '@/components/Select';
 import Input from '@/components/Input';
+import Select from '@/components/Select';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 const fitnessGoalOptions = [
 	{ label: 'Weight loss', value: 'Weight loss' },
@@ -126,7 +126,9 @@ const Second = () => {
 							))}
 						</View>
 						{errors.fitnessGoal && (
-							<Text className='text-red-500 text-sm mt-1'>{errors.fitnessGoal}</Text>
+							<Text className='text-red-500 text-sm mt-1'>
+								{errors.fitnessGoal}
+							</Text>
 						)}
 					</View>
 
@@ -173,7 +175,9 @@ const Second = () => {
 							</View>
 						</View>
 						{errors.workOutTime && (
-							<Text className='text-red-500 text-sm mt-1'>{errors.workOutTime}</Text>
+							<Text className='text-red-500 text-sm mt-1'>
+								{errors.workOutTime}
+							</Text>
 						)}
 					</View>
 

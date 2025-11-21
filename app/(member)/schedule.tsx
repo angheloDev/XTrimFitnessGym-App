@@ -1,4 +1,5 @@
 import FixedView from '@/components/FixedView';
+import TabHeader from '@/components/TabHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { GET_CLIENT_SESSIONS_QUERY } from '@/graphql/queries';
 import { COMPLETE_SESSION_MUTATION } from '@/graphql/mutations';
@@ -97,21 +98,19 @@ const MemberSchedule = () => {
 
 	return (
 		<FixedView className='flex-1 bg-bg-darker'>
+			<TabHeader showCoachIcon={true} />
 			<ScrollView
 				className='flex-1'
 				contentContainerClassName='p-5'
 				showsVerticalScrollIndicator={false}
 			>
-				<View className='flex-row justify-between items-center mb-6'>
-					<View>
-						<Text className='text-3xl font-bold text-text-primary'>
-							Upcoming Sessions
-						</Text>
-						<Text className='text-text-secondary mt-1'>
-							Your scheduled workouts
-						</Text>
-					</View>
-					<Ionicons name='calendar' size={32} color='#F9C513' />
+				<View className='mb-6'>
+					<Text className='text-3xl font-bold text-text-primary'>
+						Upcoming Sessions
+					</Text>
+					<Text className='text-text-secondary mt-1'>
+						Your scheduled workouts
+					</Text>
 				</View>
 
 				{loading ? (

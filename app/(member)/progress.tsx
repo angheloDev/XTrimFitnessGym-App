@@ -1,31 +1,38 @@
+import DatePicker from '@/components/DatePicker';
 import FixedView from '@/components/FixedView';
 import GradientButton from '@/components/GradientButton';
 import Input from '@/components/Input';
 import Select from '@/components/Select';
+import TabHeader from '@/components/TabHeader';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+	GetGoalsQuery,
+	GetGoalsQueryVariables,
+	GetWeightProgressChartQuery,
+	GetWeightProgressChartQueryVariables,
+} from '@/graphql/generated/types';
+import {
+	CREATE_GOAL_MUTATION,
+	DELETE_GOAL_MUTATION,
+	UPDATE_GOAL_MUTATION,
+} from '@/graphql/mutations';
 import {
 	GET_GOALS_QUERY,
 	GET_WEIGHT_PROGRESS_CHART_QUERY,
 } from '@/graphql/queries';
-import {
-	CREATE_GOAL_MUTATION,
-	UPDATE_GOAL_MUTATION,
-	DELETE_GOAL_MUTATION,
-} from '@/graphql/mutations';
-import { useQuery, useMutation } from '@apollo/client/react';
+import { useMutation, useQuery } from '@apollo/client/react';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-	ScrollView,
-	Text,
-	View,
-	FlatList,
-	TouchableOpacity,
-	Modal,
 	Alert,
 	Dimensions,
+	FlatList,
+	Modal,
+	ScrollView,
+	Text,
+	TouchableOpacity,
+	View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import DatePicker from '@/components/DatePicker';
 
 const { width } = Dimensions.get('window');
 
@@ -55,17 +62,21 @@ const MemberProgress = () => {
 	const [targetDate, setTargetDate] = useState<Date | undefined>();
 	const [errors, setErrors] = useState<Record<string, string>>({});
 
-	const { data: goalsData, refetch: refetchGoals } = useQuery(
-		GET_GOALS_QUERY,
-		{
-			variables: { clientId: user?.id, status: 'active' },
-			fetchPolicy: 'cache-and-network',
-		}
-	);
+	const { data: goalsData, refetch: refetchGoals } = useQuery<
+		GetGoalsQuery,
+		GetGoalsQueryVariables
+	>(GET_GOALS_QUERY, {
+		variables: { clientId: user?.id || '', status: 'active' },
+		fetchPolicy: 'cache-and-network',
+		skip: !user?.id,
+	});
 
-	const { data: progressData } = useQuery(GET_WEIGHT_PROGRESS_CHART_QUERY, {
-		variables: { clientId: user?.id, goalId: selectedGoal?.id },
-		skip: !selectedGoal || !showWeightChart,
+	const { data: progressData } = useQuery<
+		GetWeightProgressChartQuery,
+		GetWeightProgressChartQueryVariables
+	>(GET_WEIGHT_PROGRESS_CHART_QUERY, {
+		variables: { clientId: user?.id || '', goalId: selectedGoal?.id },
+		skip: !selectedGoal || !showWeightChart || !user?.id,
 	});
 
 	const [createGoal, { loading: creating }] = useMutation(
@@ -147,9 +158,7 @@ const MemberProgress = () => {
 			title: title.trim(),
 			description: description.trim() || undefined,
 			targetWeight: targetWeight ? parseFloat(targetWeight) : undefined,
-			currentWeight: currentWeight
-				? parseFloat(currentWeight)
-				: undefined,
+			currentWeight: currentWeight ? parseFloat(currentWeight) : undefined,
 			targetDate: targetDate?.toISOString(),
 		};
 
@@ -197,8 +206,7 @@ const MemberProgress = () => {
 					style={{ height: chartHeight, width: chartWidth }}
 				>
 					{progressPoints.map((point: any, index: number) => {
-						const normalizedWeight =
-							(point.weight - minWeight) / range;
+						const normalizedWeight = (point.weight - minWeight) / range;
 						const y = chartHeight - normalizedWeight * chartHeight;
 						const x = (index / (progressPoints.length - 1 || 1)) * chartWidth;
 
@@ -232,6 +240,7 @@ const MemberProgress = () => {
 
 	return (
 		<FixedView className='flex-1 bg-bg-darker'>
+			<TabHeader showCoachIcon={true} />
 			<ScrollView
 				className='flex-1'
 				contentContainerClassName='p-5'
@@ -301,43 +310,27 @@ const MemberProgress = () => {
 												setShowWeightChart(true);
 											}}
 										>
-											<Ionicons
-												name='stats-chart'
-												size={24}
-												color='#F9C513'
-											/>
+											<Ionicons name='stats-chart' size={24} color='#F9C513' />
 										</TouchableOpacity>
 										<TouchableOpacity onPress={() => handleEdit(item)}>
-											<Ionicons
-												name='pencil'
-												size={24}
-												color='#007AFF'
-											/>
+											<Ionicons name='pencil' size={24} color='#007AFF' />
 										</TouchableOpacity>
 										<TouchableOpacity
 											onPress={() => {
-												Alert.alert(
-													'Delete Goal',
-													'Are you sure?',
-													[
-														{ text: 'Cancel', style: 'cancel' },
-														{
-															text: 'Delete',
-															style: 'destructive',
-															onPress: () =>
-																deleteGoal({
-																	variables: { id: item.id },
-																}),
-														},
-													]
-												);
+												Alert.alert('Delete Goal', 'Are you sure?', [
+													{ text: 'Cancel', style: 'cancel' },
+													{
+														text: 'Delete',
+														style: 'destructive',
+														onPress: () =>
+															deleteGoal({
+																variables: { id: item.id },
+															}),
+													},
+												]);
 											}}
 										>
-											<Ionicons
-												name='trash'
-												size={24}
-												color='#FF3B30'
-											/>
+											<Ionicons name='trash' size={24} color='#FF3B30' />
 										</TouchableOpacity>
 									</View>
 								</View>
@@ -386,8 +379,22 @@ const MemberProgress = () => {
 					resetForm();
 				}}
 			>
-				<View className='flex-1 bg-black/50 justify-end'>
-					<View className='bg-bg-primary rounded-t-3xl p-5 max-h-[90%]'>
+				<View
+					style={{
+						flex: 1,
+						backgroundColor: 'rgba(0, 0, 0, 0.5)',
+						justifyContent: 'flex-end',
+					}}
+				>
+					<View
+						style={{
+							backgroundColor: '#1C1C1E',
+							borderTopLeftRadius: 24,
+							borderTopRightRadius: 24,
+							padding: 20,
+							maxHeight: '90%',
+						}}
+					>
 						<ScrollView showsVerticalScrollIndicator={false}>
 							<View className='flex-row justify-between items-center mb-6'>
 								<Text className='text-2xl font-bold text-text-primary'>
@@ -480,8 +487,22 @@ const MemberProgress = () => {
 					setSelectedGoal(null);
 				}}
 			>
-				<View className='flex-1 bg-black/50 justify-center px-5'>
-					<View className='bg-bg-primary rounded-2xl p-6 max-h-[80%]'>
+				<View
+					style={{
+						flex: 1,
+						backgroundColor: 'rgba(0, 0, 0, 0.5)',
+						justifyContent: 'center',
+						paddingHorizontal: 20,
+					}}
+				>
+					<View
+						style={{
+							backgroundColor: '#1C1C1E',
+							borderRadius: 24,
+							padding: 24,
+							maxHeight: '80%',
+						}}
+					>
 						<View className='flex-row justify-between items-center mb-4'>
 							<Text className='text-2xl font-bold text-text-primary'>
 								{selectedGoal?.title}
@@ -504,4 +525,3 @@ const MemberProgress = () => {
 };
 
 export default MemberProgress;
-

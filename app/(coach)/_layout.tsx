@@ -1,9 +1,12 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
+import React from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CoachLayout = () => {
+	const insets = useSafeAreaInsets();
+
 	return (
 		<ProtectedRoute allowedRoles={['coach']}>
 			<Tabs
@@ -15,6 +18,9 @@ const CoachLayout = () => {
 						backgroundColor: '#1C1C1E',
 						borderTopColor: '#2C2C2E',
 						borderTopWidth: 1,
+						paddingTop: 8,
+						paddingBottom: Math.max(insets.bottom, 12),
+						height: 60 + Math.max(insets.bottom, 12) - 8,
 					},
 					tabBarLabelStyle: {
 						fontSize: 12,
@@ -58,10 +64,27 @@ const CoachLayout = () => {
 						),
 					}}
 				/>
+				<Tabs.Screen
+					name='clients'
+					options={{
+						href: null,
+					}}
+				/>
+				<Tabs.Screen
+					name='profile'
+					options={{
+						href: null,
+					}}
+				/>
+				<Tabs.Screen
+					name='sessions'
+					options={{
+						href: null,
+					}}
+				/>
 			</Tabs>
 		</ProtectedRoute>
 	);
 };
 
 export default CoachLayout;
-

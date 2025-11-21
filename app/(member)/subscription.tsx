@@ -1,5 +1,6 @@
 import FixedView from '@/components/FixedView';
 import GradientButton from '@/components/GradientButton';
+import TabHeader from '@/components/TabHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import {
 	GET_MEMBERSHIPS_QUERY,
@@ -99,6 +100,7 @@ const MemberSubscription = () => {
 
 	return (
 		<FixedView className='flex-1 bg-bg-darker'>
+			<TabHeader showCoachIcon={true} />
 			<ScrollView
 				className='flex-1'
 				contentContainerClassName='p-5'

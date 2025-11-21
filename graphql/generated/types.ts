@@ -25,6 +25,7 @@ export type AuthResponse = {
 
 export type CoachDetails = {
   __typename?: 'CoachDetails';
+  clientLimit?: Maybe<Scalars['Int']['output']>;
   clientsIds?: Maybe<Array<Maybe<Scalars['ID']['output']>>>;
   moreDetails?: Maybe<Scalars['String']['output']>;
   ratings?: Maybe<Scalars['Float']['output']>;
@@ -36,6 +37,7 @@ export type CoachDetails = {
 };
 
 export type CoachDetailsInput = {
+  clientLimit?: InputMaybe<Scalars['Int']['input']>;
   clientsIds?: InputMaybe<Array<InputMaybe<Scalars['ID']['input']>>>;
   moreDetails?: InputMaybe<Scalars['String']['input']>;
   ratings?: InputMaybe<Scalars['Float']['input']>;

@@ -85,18 +85,20 @@ const styles = StyleSheet.create({
 	},
 	gradient: {
 		paddingVertical: 16,
+		paddingHorizontal: 20,
 		borderRadius: 12,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
 	secondaryContainer: {
 		paddingVertical: 16,
+		paddingHorizontal: 20,
 		borderRadius: 12,
 		alignItems: 'center',
 		justifyContent: 'center',
-		backgroundColor: 'rgba(255, 255, 255, 0.04)',
+		backgroundColor: '#2C2C2E',
 		borderWidth: 1,
-		borderColor: 'rgba(255, 255, 255, 0.1)',
+		borderColor: '#3A3A3C',
 	},
 	text: {
 		color: '#ffffff',

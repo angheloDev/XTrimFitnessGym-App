@@ -1,4 +1,5 @@
 import FixedView from '@/components/FixedView';
+import TabHeader from '@/components/TabHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { GET_COACH_SESSIONS_QUERY, GET_USERS_QUERY } from '@/graphql/queries';
 import { useQuery } from '@apollo/client/react';
@@ -20,7 +21,8 @@ const CoachDashboard = () => {
 	const { data: sessionsData, loading: sessionsLoading } = useQuery(
 		GET_COACH_SESSIONS_QUERY,
 		{
-			variables: { coachId: user?.id },
+			variables: { coachId: user?.id || '' },
+			skip: !user?.id,
 			fetchPolicy: 'cache-and-network',
 		}
 	);
@@ -54,30 +56,21 @@ const CoachDashboard = () => {
 		});
 	};
 
-	const handleLogout = async () => {
-		await logout();
-		router.replace('/(auth)/login');
-	};
-
 	return (
 		<FixedView className='flex-1 bg-bg-darker'>
+			<TabHeader showCoachIcon={false} />
 			<ScrollView
 				className='flex-1'
 				contentContainerClassName='p-5'
 				showsVerticalScrollIndicator={false}
 			>
-				<View className='flex-row justify-between items-center mb-6'>
-					<View>
-						<Text className='text-3xl font-bold text-text-primary'>
-							Dashboard
-						</Text>
-						<Text className='text-text-secondary mt-1'>
-							Welcome back, Coach {user?.firstName}!
-						</Text>
-					</View>
-					<TouchableOpacity onPress={handleLogout} className='p-2'>
-						<Ionicons name='log-out-outline' size={28} color='#FF3B30' />
-					</TouchableOpacity>
+				<View className='mb-6'>
+					<Text className='text-3xl font-bold text-text-primary'>
+						Dashboard
+					</Text>
+					<Text className='text-text-secondary mt-1'>
+						Welcome back, Coach {user?.firstName}!
+					</Text>
 				</View>
 
 				{/* Quick Stats */}
