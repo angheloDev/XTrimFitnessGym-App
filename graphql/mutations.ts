@@ -237,3 +237,100 @@ export const CANCEL_MEMBERSHIP_MUTATION = gql`
 	}
 `;
 
+// User mutations
+export const UPDATE_USER_MUTATION = gql`
+	mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
+		updateUser(id: $id, input: $input) {
+			id
+			firstName
+			lastName
+			email
+			role
+			phoneNumber
+			dateOfBirth
+			gender
+			heardFrom
+			agreedToTermsAndConditions
+			agreedToPrivacyPolicy
+			agreedToLiabilityWaiver
+			membershipDetails {
+				membershipId
+				physiqueGoalType
+				fitnessGoal
+				workOutTime
+				coachesIds
+			}
+			coachDetails {
+				clientsIds
+				sessionsIds
+				specialization
+				ratings
+				yearsOfExperience
+				moreDetails
+				teachingDate
+				teachingTime
+				clientLimit
+			}
+			createdAt
+			updatedAt
+		}
+	}
+`;
+
+// Coach Request mutations
+export const CREATE_COACH_REQUEST_MUTATION = gql`
+	mutation CreateCoachRequest($input: CreateCoachRequestInput!) {
+		createCoachRequest(input: $input) {
+			id
+			clientId
+			client {
+				id
+				firstName
+				lastName
+				email
+			}
+			coachId
+			coach {
+				id
+				firstName
+				lastName
+			}
+			status
+			message
+			createdAt
+			updatedAt
+		}
+	}
+`;
+
+export const UPDATE_COACH_REQUEST_MUTATION = gql`
+	mutation UpdateCoachRequest($id: ID!, $input: UpdateCoachRequestInput!) {
+		updateCoachRequest(id: $id, input: $input) {
+			id
+			clientId
+			client {
+				id
+				firstName
+				lastName
+				email
+			}
+			coachId
+			coach {
+				id
+				firstName
+				lastName
+			}
+			status
+			message
+			createdAt
+			updatedAt
+		}
+	}
+`;
+
+export const CANCEL_COACH_REQUEST_MUTATION = gql`
+	mutation CancelCoachRequest($id: ID!) {
+		cancelCoachRequest(id: $id)
+	}
+`;
+

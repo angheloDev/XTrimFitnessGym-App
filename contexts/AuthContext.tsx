@@ -1,6 +1,7 @@
 import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { clearUser, UserRole } from '@/store/slices/userSlice';
+import { storage } from '@/utils/storage';
 import { User } from '@/graphql/generated/types';
 
 interface AuthContextType {
@@ -32,7 +33,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 		return 'incomplete';
 	}, [user]);
 
-	const logout = () => {
+	const logout = async () => {
+		// Clear token from AsyncStorage
+		await storage.removeItem('auth_token');
 		dispatch(clearUser());
 	};
 

@@ -1,5 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -52,11 +53,13 @@ const TabHeader: React.FC<TabHeaderProps> = ({ showCoachIcon = false }) => {
 						)}
 					</View>
 
-					{/* Center - App Title */}
+					{/* Center - App Logo */}
 					<View className='flex-1 items-center'>
-						<Text className='text-text-primary font-bold text-lg'>
-							XTrimFit Gym
-						</Text>
+						<Image
+							source={require('@/assets/logos/XTFG_logo.PNG')}
+							style={{ width: 120, height: 40 }}
+							contentFit='contain'
+						/>
 					</View>
 
 					{/* Right side - Notifications and Profile */}

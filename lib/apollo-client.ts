@@ -8,6 +8,7 @@ import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import { storage } from '@/utils/storage';
 
 // Get the API URL based on the platform and environment
 const getApiUrl = () => {
@@ -51,10 +52,27 @@ const httpLink = createHttpLink({
 	credentials: 'include', // Important for cookies
 });
 
-// Auth link to add any headers if needed
+// Auth link to add token header (fallback if cookies don't work)
 const authLink = setContext(async (_, { headers }) => {
-	// You can add auth headers here if needed
-	// For now, we're using cookies from the backend
+	// Get token from AsyncStorage (fallback if cookies don't work in React Native)
+	try {
+		const token = await storage.getItem('auth_token');
+		
+		if (token) {
+			console.log('✅ [Apollo Client] Token found in AsyncStorage, adding to Authorization header');
+			return {
+				headers: {
+					...headers,
+					authorization: `Bearer ${token}`,
+				},
+			};
+		} else {
+			console.warn('⚠️ [Apollo Client] No token found in AsyncStorage');
+		}
+	} catch (error) {
+		console.error('❌ [Apollo Client] Error retrieving token from AsyncStorage:', error);
+	}
+	
 	return {
 		headers: {
 			...headers,

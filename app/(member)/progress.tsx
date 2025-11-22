@@ -14,7 +14,6 @@ import {
 import {
 	CREATE_GOAL_MUTATION,
 	DELETE_GOAL_MUTATION,
-	UPDATE_GOAL_MUTATION,
 } from '@/graphql/mutations';
 import {
 	GET_GOALS_QUERY,
@@ -50,7 +49,6 @@ const goalTypeOptions = [
 const MemberProgress = () => {
 	const { user } = useAuth();
 	const [showCreateModal, setShowCreateModal] = useState(false);
-	const [editingGoal, setEditingGoal] = useState<any>(null);
 	const [selectedGoal, setSelectedGoal] = useState<any>(null);
 	const [showWeightChart, setShowWeightChart] = useState(false);
 
@@ -94,21 +92,6 @@ const MemberProgress = () => {
 		}
 	);
 
-	const [updateGoal, { loading: updating }] = useMutation(
-		UPDATE_GOAL_MUTATION,
-		{
-			onCompleted: () => {
-				setShowCreateModal(false);
-				resetForm();
-				refetchGoals();
-				Alert.alert('Success', 'Goal updated successfully!');
-			},
-			onError: (error) => {
-				Alert.alert('Error', error.message);
-			},
-		}
-	);
-
 	const [deleteGoal] = useMutation(DELETE_GOAL_MUTATION, {
 		onCompleted: () => {
 			refetchGoals();
@@ -126,25 +109,38 @@ const MemberProgress = () => {
 		setTargetWeight('');
 		setCurrentWeight('');
 		setTargetDate(undefined);
-		setEditingGoal(null);
 		setErrors({});
-	};
-
-	const handleEdit = (goal: any) => {
-		setEditingGoal(goal);
-		setTitle(goal.title);
-		setGoalType(goal.goalType);
-		setDescription(goal.description || '');
-		setTargetWeight(goal.targetWeight?.toString() || '');
-		setCurrentWeight(goal.currentWeight?.toString() || '');
-		setTargetDate(goal.targetDate ? new Date(goal.targetDate) : undefined);
-		setShowCreateModal(true);
 	};
 
 	const validateForm = () => {
 		const newErrors: Record<string, string> = {};
 		if (!title.trim()) newErrors.title = 'Title is required';
 		if (!goalType) newErrors.goalType = 'Goal type is required';
+		if (!targetDate) newErrors.targetDate = 'Target date is required';
+
+		// Weight fields are required only for weight-related goal types
+		const isWeightRelated =
+			goalType === 'WEIGHT_LOSS' || goalType === 'MUSCLE_BUILDING';
+		if (isWeightRelated) {
+			if (!currentWeight.trim()) {
+				newErrors.currentWeight =
+					'Current weight is required for weight-related goals';
+			} else if (
+				isNaN(parseFloat(currentWeight)) ||
+				parseFloat(currentWeight) <= 0
+			) {
+				newErrors.currentWeight = 'Please enter a valid current weight';
+			}
+			if (!targetWeight.trim()) {
+				newErrors.targetWeight =
+					'Target weight is required for weight-related goals';
+			} else if (
+				isNaN(parseFloat(targetWeight)) ||
+				parseFloat(targetWeight) <= 0
+			) {
+				newErrors.targetWeight = 'Please enter a valid target weight';
+			}
+		}
 
 		setErrors(newErrors);
 		return Object.keys(newErrors).length === 0;
@@ -157,21 +153,18 @@ const MemberProgress = () => {
 			goalType,
 			title: title.trim(),
 			description: description.trim() || undefined,
-			targetWeight: targetWeight ? parseFloat(targetWeight) : undefined,
-			currentWeight: currentWeight ? parseFloat(currentWeight) : undefined,
 			targetDate: targetDate?.toISOString(),
 		};
 
-		if (editingGoal) {
-			updateGoal({
-				variables: {
-					id: editingGoal.id,
-					input,
-				},
-			});
-		} else {
-			createGoal({ variables: { input } });
+		// Only include weight fields for weight-related goals
+		const isWeightRelated =
+			goalType === 'WEIGHT_LOSS' || goalType === 'MUSCLE_BUILDING';
+		if (isWeightRelated) {
+			input.currentWeight = parseFloat(currentWeight);
+			input.targetWeight = parseFloat(targetWeight);
 		}
+
+		createGoal({ variables: { input } });
 	};
 
 	const goals = goalsData?.getGoals || [];
@@ -303,66 +296,63 @@ const MemberProgress = () => {
 											)?.label || item.goalType}
 										</Text>
 									</View>
-									<View className='flex-row gap-2'>
-										<TouchableOpacity
-											onPress={() => {
-												setSelectedGoal(item);
-												setShowWeightChart(true);
-											}}
-										>
-											<Ionicons name='stats-chart' size={24} color='#F9C513' />
-										</TouchableOpacity>
-										<TouchableOpacity onPress={() => handleEdit(item)}>
-											<Ionicons name='pencil' size={24} color='#007AFF' />
-										</TouchableOpacity>
-										<TouchableOpacity
-											onPress={() => {
-												Alert.alert('Delete Goal', 'Are you sure?', [
-													{ text: 'Cancel', style: 'cancel' },
-													{
-														text: 'Delete',
-														style: 'destructive',
-														onPress: () =>
-															deleteGoal({
-																variables: { id: item.id },
-															}),
-													},
-												]);
-											}}
-										>
-											<Ionicons name='trash' size={24} color='#FF3B30' />
-										</TouchableOpacity>
-									</View>
+									<TouchableOpacity
+										onPress={() => {
+											setSelectedGoal(item);
+											setShowWeightChart(true);
+										}}
+									>
+										<Ionicons name='stats-chart' size={24} color='#F9C513' />
+									</TouchableOpacity>
 								</View>
 								{item.description && (
 									<Text className='text-text-secondary text-sm mb-2'>
 										{item.description}
 									</Text>
 								)}
-								{(item.targetWeight || item.currentWeight) && (
-									<View className='flex-row gap-4 mt-2'>
-										{item.currentWeight && (
-											<View>
-												<Text className='text-text-secondary text-xs'>
-													Current
-												</Text>
-												<Text className='text-text-primary font-semibold'>
-													{item.currentWeight} kg
-												</Text>
-											</View>
-										)}
-										{item.targetWeight && (
-											<View>
-												<Text className='text-text-secondary text-xs'>
-													Target
-												</Text>
-												<Text className='text-text-primary font-semibold'>
-													{item.targetWeight} kg
-												</Text>
-											</View>
-										)}
-									</View>
-								)}
+								<View className='flex-row justify-between items-end mt-2'>
+									{(item.targetWeight || item.currentWeight) && (
+										<View className='flex-row gap-4'>
+											{item.currentWeight && (
+												<View>
+													<Text className='text-text-secondary text-xs'>
+														Current
+													</Text>
+													<Text className='text-text-primary font-semibold'>
+														{item.currentWeight} kg
+													</Text>
+												</View>
+											)}
+											{item.targetWeight && (
+												<View>
+													<Text className='text-text-secondary text-xs'>
+														Target
+													</Text>
+													<Text className='text-text-primary font-semibold'>
+														{item.targetWeight} kg
+													</Text>
+												</View>
+											)}
+										</View>
+									)}
+									<TouchableOpacity
+										onPress={() => {
+											Alert.alert('Delete Goal', 'Are you sure?', [
+												{ text: 'Cancel', style: 'cancel' },
+												{
+													text: 'Delete',
+													style: 'destructive',
+													onPress: () =>
+														deleteGoal({
+															variables: { id: item.id },
+														}),
+												},
+											]);
+										}}
+									>
+										<Ionicons name='trash' size={24} color='#FF3B30' />
+									</TouchableOpacity>
+								</View>
 							</View>
 						)}
 					/>
@@ -373,32 +363,18 @@ const MemberProgress = () => {
 			<Modal
 				visible={showCreateModal}
 				animationType='slide'
-				transparent
+				transparent={false}
 				onRequestClose={() => {
 					setShowCreateModal(false);
 					resetForm();
 				}}
 			>
-				<View
-					style={{
-						flex: 1,
-						backgroundColor: 'rgba(0, 0, 0, 0.5)',
-						justifyContent: 'flex-end',
-					}}
-				>
-					<View
-						style={{
-							backgroundColor: '#1C1C1E',
-							borderTopLeftRadius: 24,
-							borderTopRightRadius: 24,
-							padding: 20,
-							maxHeight: '90%',
-						}}
-					>
+				<View className='flex-1 bg-bg-darker justify-end'>
+					<View className='bg-bg-primary rounded-t-3xl p-6 max-h-[90%]'>
 						<ScrollView showsVerticalScrollIndicator={false}>
 							<View className='flex-row justify-between items-center mb-6'>
 								<Text className='text-2xl font-bold text-text-primary'>
-									{editingGoal ? 'Edit Goal' : 'Create Goal'}
+									Create Goal
 								</Text>
 								<TouchableOpacity
 									onPress={() => {
@@ -411,19 +387,24 @@ const MemberProgress = () => {
 							</View>
 
 							<Select
-								label='Goal Type'
+								label='Goal Type *'
 								options={goalTypeOptions}
 								value={goalType}
 								onChange={(value) => {
 									setGoalType(value);
 									setErrors({ ...errors, goalType: '' });
+									// Clear weight fields when switching to non-weight-related goal
+									if (value !== 'WEIGHT_LOSS' && value !== 'MUSCLE_BUILDING') {
+										setCurrentWeight('');
+										setTargetWeight('');
+									}
 								}}
 								placeholder='Select goal type'
 								error={errors.goalType}
 							/>
 
 							<Input
-								label='Title'
+								label='Title *'
 								placeholder='e.g., Lose 10kg in 3 months'
 								value={title}
 								onChangeText={(text) => {
@@ -434,7 +415,7 @@ const MemberProgress = () => {
 							/>
 
 							<Input
-								label='Description (Optional)'
+								label='Description (optional)'
 								placeholder='Describe your goal...'
 								value={description}
 								onChangeText={setDescription}
@@ -442,35 +423,52 @@ const MemberProgress = () => {
 								numberOfLines={3}
 							/>
 
-							<Input
-								label='Current Weight (kg, Optional)'
-								placeholder='Enter current weight'
-								value={currentWeight}
-								onChangeText={setCurrentWeight}
-								keyboardType='decimal-pad'
-							/>
+							{(goalType === 'WEIGHT_LOSS' ||
+								goalType === 'MUSCLE_BUILDING') && (
+								<>
+									<Input
+										label='Current Weight (kg) *'
+										placeholder='Enter current weight'
+										value={currentWeight}
+										onChangeText={(text) => {
+											setCurrentWeight(text);
+											setErrors({ ...errors, currentWeight: '' });
+										}}
+										keyboardType='decimal-pad'
+										error={errors.currentWeight}
+									/>
 
-							<Input
-								label='Target Weight (kg, Optional)'
-								placeholder='Enter target weight'
-								value={targetWeight}
-								onChangeText={setTargetWeight}
-								keyboardType='decimal-pad'
-							/>
+									<Input
+										label='Target Weight (kg) *'
+										placeholder='Enter target weight'
+										value={targetWeight}
+										onChangeText={(text) => {
+											setTargetWeight(text);
+											setErrors({ ...errors, targetWeight: '' });
+										}}
+										keyboardType='decimal-pad'
+										error={errors.targetWeight}
+									/>
+								</>
+							)}
 
 							<DatePicker
-								label='Target Date (Optional)'
+								label='Target Date *'
 								value={targetDate}
-								onChange={setTargetDate}
+								onChange={(date) => {
+									setTargetDate(date);
+									setErrors({ ...errors, targetDate: '' });
+								}}
 								minimumDate={new Date()}
+								error={errors.targetDate}
 							/>
 
 							<GradientButton
 								onPress={handleSubmit}
-								loading={creating || updating}
+								loading={creating}
 								className='mt-4'
 							>
-								{editingGoal ? 'Update Goal' : 'Create Goal'}
+								{creating ? 'Creating...' : 'Create Goal'}
 							</GradientButton>
 						</ScrollView>
 					</View>
@@ -481,28 +479,14 @@ const MemberProgress = () => {
 			<Modal
 				visible={showWeightChart}
 				animationType='slide'
-				transparent
+				transparent={false}
 				onRequestClose={() => {
 					setShowWeightChart(false);
 					setSelectedGoal(null);
 				}}
 			>
-				<View
-					style={{
-						flex: 1,
-						backgroundColor: 'rgba(0, 0, 0, 0.5)',
-						justifyContent: 'center',
-						paddingHorizontal: 20,
-					}}
-				>
-					<View
-						style={{
-							backgroundColor: '#1C1C1E',
-							borderRadius: 24,
-							padding: 24,
-							maxHeight: '80%',
-						}}
-					>
+				<View className='flex-1 bg-bg-darker justify-center px-5'>
+					<View className='bg-bg-primary rounded-2xl p-6 max-h-[80%]'>
 						<View className='flex-row justify-between items-center mb-4'>
 							<Text className='text-2xl font-bold text-text-primary'>
 								{selectedGoal?.title}

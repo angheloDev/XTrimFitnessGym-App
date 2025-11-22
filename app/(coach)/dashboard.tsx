@@ -36,7 +36,11 @@ const CoachDashboard = () => {
 	);
 
 	const sessions = sessionsData?.getCoachSessions || [];
-	const clients = clientsData?.getUsers || [];
+	// Filter to only show coach's own clients
+	const allClients = clientsData?.getUsers || [];
+	const clients = allClients.filter((client: any) =>
+		user?.coachDetails?.clientsIds?.includes(client.id)
+	);
 	const upcomingSessions = sessions.filter(
 		(s: any) =>
 			new Date(s.date) >= new Date() && s.status === 'scheduled'

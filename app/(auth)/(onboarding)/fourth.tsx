@@ -11,6 +11,7 @@ import { CREATE_USER_MUTATION } from '@/graphql/mutations';
 import { useAppDispatch } from '@/store/hooks';
 import { setUser } from '@/store/slices/userSlice';
 import { convertGraphQLUser } from '@/utils/graphql-utils';
+import { storage } from '@/utils/storage';
 import { useMutation } from '@apollo/client/react';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -35,10 +36,20 @@ const Fourth = () => {
 		CreateUserMutation,
 		CreateUserMutationVariables
 	>(CREATE_USER_MUTATION, {
-		onCompleted: (data) => {
+		onCompleted: async (data) => {
 			// Convert GraphQL User to Redux User format (handle null values)
 			const user = convertGraphQLUser(data.createUser.user);
 			dispatch(setUser(user));
+
+			// Store token in AsyncStorage as fallback (React Native cookies may not work)
+			if (data.createUser.token) {
+				console.log('✅ [Signup] Storing token in AsyncStorage');
+				await storage.setItem('auth_token', data.createUser.token);
+				console.log('✅ [Signup] Token stored successfully');
+			} else {
+				console.warn('⚠️ [Signup] No token received in signup response');
+			}
+
 			clearData();
 			// Navigate based on user role
 			if (user.role === 'coach') {

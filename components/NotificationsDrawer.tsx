@@ -1,8 +1,14 @@
-import { GET_UPCOMING_SESSIONS_QUERY } from '@/graphql/queries';
-import { useQuery } from '@apollo/client/react';
+import { useAuth } from '@/contexts/AuthContext';
+import { UPDATE_COACH_REQUEST_MUTATION } from '@/graphql/mutations';
+import {
+	GET_PENDING_COACH_REQUESTS_QUERY,
+	GET_UPCOMING_SESSIONS_QUERY,
+} from '@/graphql/queries';
+import { useMutation, useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
+	Alert,
 	Animated,
 	Modal,
 	ScrollView,
@@ -20,11 +26,13 @@ interface NotificationsDrawerProps {
 
 interface Notification {
 	id: string;
-	type: 'session' | 'membership' | 'progress';
+	type: 'session' | 'membership' | 'progress' | 'coachRequest';
 	title: string;
 	message: string;
 	time: string;
 	read: boolean;
+	requestId?: string; // For coach requests
+	coachRequest?: any; // Full request data
 }
 
 const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
@@ -32,12 +40,31 @@ const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
 	onClose,
 }) => {
 	const insets = useSafeAreaInsets();
+	const { user } = useAuth();
 	const [slideAnim] = useState(new Animated.Value(0));
 	const [notifications, setNotifications] = useState<Notification[]>([]);
 
 	const { data: sessionsData } = useQuery(GET_UPCOMING_SESSIONS_QUERY, {
 		skip: !visible,
 		fetchPolicy: 'cache-and-network',
+	});
+
+	const { data: coachRequestsData, refetch: refetchRequests } = useQuery(
+		GET_PENDING_COACH_REQUESTS_QUERY,
+		{
+			skip: !visible || user?.role !== 'coach',
+			fetchPolicy: 'cache-and-network',
+		}
+	);
+
+	const [updateCoachRequest] = useMutation(UPDATE_COACH_REQUEST_MUTATION, {
+		onCompleted: () => {
+			refetchRequests();
+			Alert.alert('Success', 'Request updated successfully');
+		},
+		onError: (error) => {
+			Alert.alert('Error', error.message);
+		},
 	});
 
 	useEffect(() => {
@@ -120,6 +147,8 @@ const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
 				return 'card';
 			case 'progress':
 				return 'trending-up';
+			case 'coachRequest':
+				return 'person-add';
 			default:
 				return 'notifications';
 		}
@@ -133,9 +162,46 @@ const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
 				return '#E41E26';
 			case 'progress':
 				return '#34C759';
+			case 'coachRequest':
+				return '#007AFF';
 			default:
 				return '#8E8E93';
 		}
+	};
+
+	const handleApproveRequest = (requestId: string) => {
+		Alert.alert('Approve Request', 'Approve this client request?', [
+			{ text: 'Cancel', style: 'cancel' },
+			{
+				text: 'Approve',
+				onPress: () => {
+					updateCoachRequest({
+						variables: {
+							id: requestId,
+							input: { status: 'approved' },
+						},
+					});
+				},
+			},
+		]);
+	};
+
+	const handleDenyRequest = (requestId: string) => {
+		Alert.alert('Deny Request', 'Deny this client request?', [
+			{ text: 'Cancel', style: 'cancel' },
+			{
+				text: 'Deny',
+				style: 'destructive',
+				onPress: () => {
+					updateCoachRequest({
+						variables: {
+							id: requestId,
+							input: { status: 'denied' },
+						},
+					});
+				},
+			},
+		]);
 	};
 
 	const translateX = slideAnim.interpolate({

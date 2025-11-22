@@ -4,10 +4,11 @@ import TabHeader from '@/components/TabHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import {
 	GET_MEMBERSHIPS_QUERY,
-	GET_CURRENT_MEMBERSHIP_QUERY,
 } from '@/graphql/queries';
 import { PURCHASE_MEMBERSHIP_MUTATION } from '@/graphql/mutations';
 import { useQuery, useMutation } from '@apollo/client/react';
+import { useAppDispatch } from '@/store/hooks';
+import { updateUser } from '@/store/slices/userSlice';
 import React, { useState } from 'react';
 import {
 	ScrollView,
@@ -22,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 const MemberSubscription = () => {
 	const { user } = useAuth();
+	const dispatch = useAppDispatch();
 	const [selectedMembership, setSelectedMembership] = useState<any>(null);
 	const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
@@ -33,21 +35,27 @@ const MemberSubscription = () => {
 		}
 	);
 
-	const { data: currentMembershipData, refetch: refetchCurrent } = useQuery(
-		GET_CURRENT_MEMBERSHIP_QUERY,
-		{
-			fetchPolicy: 'cache-and-network',
-		}
-	);
+	// Check if user has membership (has membershipId in membershipDetails)
+	const hasMembership = !!user?.membershipDetails?.membershipId;
 
 	const [purchaseMembership, { loading: purchasing }] = useMutation(
 		PURCHASE_MEMBERSHIP_MUTATION,
 		{
-			onCompleted: () => {
+			onCompleted: (data) => {
 				setShowPurchaseModal(false);
 				setSelectedMembership(null);
-				refetchCurrent();
 				refetchMemberships();
+				// Update user in Redux with new membershipId
+				if (user && selectedMembership) {
+					dispatch(
+						updateUser({
+							membershipDetails: {
+								...user.membershipDetails,
+								membershipId: selectedMembership.id,
+							},
+						} as any)
+					);
+				}
 				Alert.alert('Success', 'Membership purchased successfully!');
 			},
 			onError: (error) => {
@@ -57,9 +65,9 @@ const MemberSubscription = () => {
 	);
 
 	const memberships = membershipsData?.getMemberships || [];
-	const currentMembership = currentMembershipData?.getCurrentMembership;
-
-	const isFreeAccount = !currentMembership || currentMembership.status !== 'ACTIVE';
+	
+	// Check if user has membership (has membershipId in membershipDetails)
+	const isFreeAccount = !hasMembership;
 
 	const handlePurchase = (membership: any) => {
 		setSelectedMembership(membership);
@@ -90,13 +98,6 @@ const MemberSubscription = () => {
 		);
 	};
 
-	const formatDate = (dateString: string) => {
-		return new Date(dateString).toLocaleDateString('en-US', {
-			year: 'numeric',
-			month: 'long',
-			day: 'numeric',
-		});
-	};
 
 	return (
 		<FixedView className='flex-1 bg-bg-darker'>
@@ -196,10 +197,15 @@ const MemberSubscription = () => {
 										ACTIVE MEMBERSHIP
 									</Text>
 									<Text className='text-white text-2xl font-bold mb-1'>
-										{currentMembership.membership?.name || 'Premium'}
+										{user?.membershipDetails?.membershipId
+											? memberships.find(
+													(m: any) =>
+														m.id === user.membershipDetails?.membershipId
+											  )?.name || 'Premium'
+											: 'Premium'}
 									</Text>
 									<Text className='text-white/80 text-sm'>
-										Expires: {formatDate(currentMembership.expiresAt)}
+										You have an active membership
 									</Text>
 								</View>
 								<Ionicons name='checkmark-circle' size={48} color='white' />
@@ -208,39 +214,20 @@ const MemberSubscription = () => {
 
 						<View className='mb-6'>
 							<Text className='text-xl font-semibold text-text-primary mb-4'>
-								Membership Details
+								Membership Status
 							</Text>
 							<View className='bg-bg-primary rounded-xl p-5'>
-								<View className='mb-4'>
+								<View>
 									<Text className='text-text-secondary text-sm mb-1'>
 										Plan Name
 									</Text>
 									<Text className='text-text-primary font-semibold text-lg'>
-										{currentMembership.membership?.name}
-									</Text>
-								</View>
-								<View className='mb-4'>
-									<Text className='text-text-secondary text-sm mb-1'>
-										Started On
-									</Text>
-									<Text className='text-text-primary font-semibold text-lg'>
-										{formatDate(currentMembership.startedAt)}
-									</Text>
-								</View>
-								<View className='mb-4'>
-									<Text className='text-text-secondary text-sm mb-1'>
-										Expires On
-									</Text>
-									<Text className='text-text-primary font-semibold text-lg'>
-										{formatDate(currentMembership.expiresAt)}
-									</Text>
-								</View>
-								<View>
-									<Text className='text-text-secondary text-sm mb-1'>
-										Price Paid
-									</Text>
-									<Text className='text-text-primary font-semibold text-lg'>
-										${currentMembership.priceAtPurchase}
+										{user?.membershipDetails?.membershipId
+											? memberships.find(
+													(m: any) =>
+														m.id === user.membershipDetails?.membershipId
+											  )?.name || 'N/A'
+											: 'N/A'}
 									</Text>
 								</View>
 							</View>
@@ -256,8 +243,7 @@ const MemberSubscription = () => {
 								</Text>
 								{memberships
 									.filter(
-										(m: any) =>
-											m.id !== currentMembership.membershipId
+										(m: any) => m.id !== user?.membershipDetails?.membershipId
 									)
 									.map((membership: any) => (
 										<View
@@ -297,7 +283,7 @@ const MemberSubscription = () => {
 					setSelectedMembership(null);
 				}}
 			>
-				<View className='flex-1 bg-black/50 justify-center px-5'>
+				<View className='flex-1 bg-bg-darker justify-center px-5'>
 					<View className='bg-bg-primary rounded-2xl p-6'>
 						<Text className='text-2xl font-bold text-text-primary mb-4'>
 							Confirm Purchase

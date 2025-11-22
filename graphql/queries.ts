@@ -253,11 +253,100 @@ export const GET_USERS_QUERY = gql`
 			email
 			role
 			phoneNumber
+			membershipDetails {
+				membershipId
+				physiqueGoalType
+				fitnessGoal
+				workOutTime
+				coachesIds
+			}
 			coachDetails {
+				clientsIds
+				sessionsIds
 				specialization
 				ratings
 				yearsOfExperience
+				moreDetails
+				teachingDate
+				teachingTime
+				clientLimit
 			}
+		}
+	}
+`;
+
+// Coach Request queries
+export const GET_PENDING_COACH_REQUESTS_QUERY = gql`
+	query GetPendingCoachRequests {
+		getPendingCoachRequests {
+			id
+			clientId
+			client {
+				id
+				firstName
+				lastName
+				email
+			}
+			coachId
+			coach {
+				id
+				firstName
+				lastName
+			}
+			status
+			message
+			createdAt
+			updatedAt
+		}
+	}
+`;
+
+export const GET_COACH_REQUESTS_QUERY = gql`
+	query GetCoachRequests($coachId: ID!, $status: CoachRequestStatus) {
+		getCoachRequests(coachId: $coachId, status: $status) {
+			id
+			clientId
+			client {
+				id
+				firstName
+				lastName
+				email
+			}
+			coachId
+			coach {
+				id
+				firstName
+				lastName
+			}
+			status
+			message
+			createdAt
+			updatedAt
+		}
+	}
+`;
+
+export const GET_CLIENT_REQUESTS_QUERY = gql`
+	query GetClientRequests($clientId: ID!, $status: CoachRequestStatus) {
+		getClientRequests(clientId: $clientId, status: $status) {
+			id
+			clientId
+			client {
+				id
+				firstName
+				lastName
+				email
+			}
+			coachId
+			coach {
+				id
+				firstName
+				lastName
+			}
+			status
+			message
+			createdAt
+			updatedAt
 		}
 	}
 `;

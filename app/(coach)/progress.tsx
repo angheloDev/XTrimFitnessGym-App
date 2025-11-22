@@ -1,5 +1,6 @@
 import FixedView from '@/components/FixedView';
 import TabHeader from '@/components/TabHeader';
+import { useAuth } from '@/contexts/AuthContext';
 import {
 	GetUsersQuery,
 	GetUsersQueryVariables,
@@ -12,7 +13,7 @@ import {
 } from '@/graphql/queries';
 import { useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
 	FlatList,
 	Modal,
@@ -26,6 +27,7 @@ const CoachProgress = () => {
 	const [selectedClient, setSelectedClient] = useState<any>(null);
 	const [showClientProgress, setShowClientProgress] = useState(false);
 
+	const { user } = useAuth();
 	const { data: clientsData } = useQuery<GetUsersQuery, GetUsersQueryVariables>(
 		GET_USERS_QUERY,
 		{
@@ -33,6 +35,17 @@ const CoachProgress = () => {
 			fetchPolicy: 'cache-and-network',
 		}
 	);
+
+	// Filter clients to only show coach's clients
+	const clients = useMemo(() => {
+		if (!clientsData?.getUsers || !user?.coachDetails?.clientsIds) {
+			return [];
+		}
+		const coachClientIds = user.coachDetails.clientsIds;
+		return clientsData.getUsers.filter((client: any) =>
+			coachClientIds.includes(client.id)
+		);
+	}, [clientsData, user]);
 
 	const { data: progressData } = useQuery<
 		GetWeightProgressChartQuery,
@@ -42,7 +55,6 @@ const CoachProgress = () => {
 		skip: !selectedClient || !showClientProgress,
 	});
 
-	const clients = clientsData?.getUsers || [];
 	const progressPoints = progressData?.getWeightProgressChart || [];
 
 	const renderWeightChart = (clientProgress: any[]) => {
@@ -179,7 +191,7 @@ const CoachProgress = () => {
 					setSelectedClient(null);
 				}}
 			>
-				<View className='flex-1 bg-black/50 justify-center px-5'>
+				<View className='flex-1 bg-bg-darker justify-center px-5'>
 					<View className='bg-bg-primary rounded-2xl p-6 max-h-[80%]'>
 						<View className='flex-row justify-between items-center mb-4'>
 							<Text className='text-2xl font-bold text-text-primary'>

@@ -232,7 +232,7 @@ const CoachSchedule = () => {
 				transparent
 				onRequestClose={() => setShowCreateModal(false)}
 			>
-				<View className='flex-1 bg-black/50 justify-end'>
+				<View className='flex-1 bg-bg-darker justify-end'>
 					<View className='bg-bg-primary rounded-t-3xl p-5 max-h-[90%]'>
 						<ScrollView showsVerticalScrollIndicator={false}>
 							<View className='flex-row justify-between items-center mb-6'>

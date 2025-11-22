@@ -9,7 +9,9 @@ import { LOGIN_MUTATION } from '@/graphql/mutations';
 import { useAppDispatch } from '@/store/hooks';
 import { setUser } from '@/store/slices/userSlice';
 import { convertGraphQLUser } from '@/utils/graphql-utils';
+import { storage } from '@/utils/storage';
 import { useMutation } from '@apollo/client/react';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -31,6 +33,15 @@ const Login = () => {
 				// Convert GraphQL User to Redux User format (handle null values)
 				const user = convertGraphQLUser(data.login.user);
 				dispatch(setUser(user));
+
+				// Store token in AsyncStorage as fallback (React Native cookies may not work)
+				if (data.login.token) {
+					console.log('✅ [Login] Storing token in AsyncStorage');
+					await storage.setItem('auth_token', data.login.token);
+					console.log('✅ [Login] Token stored successfully');
+				} else {
+					console.warn('⚠️ [Login] No token received in login response');
+				}
 
 				// Small delay to ensure Redux state is updated
 				await new Promise((resolve) => setTimeout(resolve, 100));
@@ -109,9 +120,13 @@ const Login = () => {
 				contentContainerClassName='flex-grow justify-center px-5 py-8'
 				keyboardShouldPersistTaps='handled'
 			>
-				<Text className='text-4xl font-bold mb-2.5 text-center text-text-primary'>
-					XTrimFit Gym
-				</Text>
+				<View className='items-center mb-6'>
+					<Image
+						source={require('@/assets/logos/XTFG_logo.PNG')}
+						style={{ width: 200, height: 100 }}
+						contentFit='contain'
+					/>
+				</View>
 				<Text className='text-lg text-text-secondary mb-10 text-center'>
 					Sign in to your account
 				</Text>

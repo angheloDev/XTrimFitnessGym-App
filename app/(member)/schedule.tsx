@@ -195,7 +195,7 @@ const MemberSchedule = () => {
 					setWeightError('');
 				}}
 			>
-				<View className='flex-1 bg-black/50 justify-center px-5'>
+				<View className='flex-1 bg-bg-darker justify-center px-5'>
 					<View className='bg-bg-primary rounded-2xl p-6'>
 						<Text className='text-2xl font-bold text-text-primary mb-2'>
 							Enter Current Weight
