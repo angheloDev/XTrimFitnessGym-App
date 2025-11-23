@@ -22,11 +22,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 	const onboardingStatus = useMemo<'completed' | 'incomplete'>(() => {
 		if (!user) return 'incomplete';
 		
-		// If user has a role (coach or member), they've completed onboarding
-		// This allows existing users to access their dashboards even if
-		// some optional fields (like coachDetails) are not set
-		if (user.role === 'coach' || user.role === 'member') {
+		// Coaches are always considered to have completed onboarding
+		if (user.role === 'coach') {
 			return 'completed';
+		}
+		
+		// For members, check hasEnteredDetails flag
+		if (user.role === 'member') {
+			const hasEnteredDetails =
+				user.membershipDetails?.hasEnteredDetails ?? false;
+			return hasEnteredDetails ? 'completed' : 'incomplete';
 		}
 		
 		// Default: incomplete if role is not recognized

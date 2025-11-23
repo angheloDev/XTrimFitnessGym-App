@@ -4,18 +4,21 @@ import GradientButton from '@/components/GradientButton';
 import Input from '@/components/Input';
 import Select from '@/components/Select';
 import TabHeader from '@/components/TabHeader';
+import TimePicker from '@/components/TimePicker';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-	UpdateUserMutation,
-	UpdateUserMutationVariables,
-} from '@/graphql/generated/types';
 import { UPDATE_USER_MUTATION } from '@/graphql/mutations';
 import { useAppDispatch } from '@/store/hooks';
-import { updateUser } from '@/store/slices/userSlice';
+import { setUser } from '@/store/slices/userSlice';
+import { convertGraphQLUser } from '@/utils/graphql-utils';
 import { useMutation } from '@apollo/client/react';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+
+// Note: UpdateUserMutation types may need to be regenerated
+// Using any for now until GraphQL codegen is run
+type UpdateUserMutation = any;
+type UpdateUserMutationVariables = any;
 
 const genderOptions = [
 	{ label: 'Male', value: 'Male' },
@@ -44,20 +47,15 @@ const dayOptions = [
 	{ label: 'Sunday', value: 'Sunday' },
 ];
 
-const timeOptions = [
-	{ label: 'Morning (6 AM - 12 PM)', value: 'Morning (6 AM - 12 PM)' },
-	{ label: 'Afternoon (12 PM - 6 PM)', value: 'Afternoon (12 PM - 6 PM)' },
-	{ label: 'Evening (6 PM - 10 PM)', value: 'Evening (6 PM - 10 PM)' },
-];
-
 const CoachProfile = () => {
 	const { user } = useAuth();
 	const dispatch = useAppDispatch();
 	const [isEditing, setIsEditing] = useState(false);
+	const [isEditingCredentials, setIsEditingCredentials] = useState(false);
 
 	const [firstName, setFirstName] = useState(user?.firstName || '');
+	const [middleName, setMiddleName] = useState(user?.middleName || '');
 	const [lastName, setLastName] = useState(user?.lastName || '');
-	const [email, setEmail] = useState(user?.email || '');
 	const [phoneNumber, setPhoneNumber] = useState(
 		user?.phoneNumber?.toString() || ''
 	);
@@ -65,7 +63,6 @@ const CoachProfile = () => {
 		user?.dateOfBirth ? new Date(user.dateOfBirth) : undefined
 	);
 	const [gender, setGender] = useState(user?.gender || '');
-	const [password, setPassword] = useState('');
 	const [specializations, setSpecializations] = useState<string[]>(
 		user?.coachDetails?.specialization || []
 	);
@@ -76,16 +73,60 @@ const CoachProfile = () => {
 		user?.coachDetails?.moreDetails || ''
 	);
 	const [teachingDates, setTeachingDates] = useState<string[]>(
-		user?.coachDetails?.teachingDate || []
+		(user?.coachDetails?.teachingDate?.filter((d): d is string => d !== null) ||
+			[]) as string[]
 	);
-	const [teachingTimes, setTeachingTimes] = useState<string[]>(
-		user?.coachDetails?.teachingTime || []
+
+	// Parse teaching time
+	const parseTeachingTime = (timeStr?: (string | null)[] | null) => {
+		if (!timeStr || timeStr.length === 0) {
+			const startDate = new Date();
+			startDate.setHours(8, 0, 0, 0);
+			const endDate = new Date();
+			endDate.setHours(18, 0, 0, 0);
+			return { start: startDate, end: endDate };
+		}
+		// If it's stored as time range string like "8-18"
+		const timeRange = timeStr[0];
+		if (timeRange && timeRange.includes('-') && !timeRange.includes(' ')) {
+			const [start, end] = timeRange.split('-');
+			const startHour = parseInt(start);
+			const endHour = parseInt(end);
+			const startDate = new Date();
+			startDate.setHours(startHour, 0, 0, 0);
+			const endDate = new Date();
+			endDate.setHours(endHour, 0, 0, 0);
+			return { start: startDate, end: endDate };
+		}
+		// Default: 8 AM start, 6 PM end
+		const startDate = new Date();
+		startDate.setHours(8, 0, 0, 0);
+		const endDate = new Date();
+		endDate.setHours(18, 0, 0, 0);
+		return { start: startDate, end: endDate };
+	};
+
+	const initialTeachingTime = parseTeachingTime(
+		user?.coachDetails?.teachingTime as (string | null)[] | undefined
+	);
+	const [teachingTimeStart, setTeachingTimeStart] = useState<Date | undefined>(
+		initialTeachingTime.start
+	);
+	const [teachingTimeEnd, setTeachingTimeEnd] = useState<Date | undefined>(
+		initialTeachingTime.end
 	);
 	const [clientLimit, setClientLimit] = useState(
 		user?.coachDetails?.clientLimit?.toString() || ''
 	);
 
+	// Credentials section
+	const [email, setEmail] = useState(user?.email || '');
+	const [password, setPassword] = useState('');
+	const [currentPassword, setCurrentPassword] = useState('');
 	const [errors, setErrors] = useState<Record<string, string>>({});
+	const [credentialErrors, setCredentialErrors] = useState<
+		Record<string, string>
+	>({});
 
 	const [updateUserMutation, { loading }] = useMutation<
 		UpdateUserMutation,
@@ -93,10 +134,14 @@ const CoachProfile = () => {
 	>(UPDATE_USER_MUTATION, {
 		onCompleted: (data) => {
 			if (data.updateUser) {
-				dispatch(updateUser(data.updateUser));
+				// Convert GraphQL User to Redux User format and update entire user object
+				const updatedUser = convertGraphQLUser(data.updateUser);
+				dispatch(setUser(updatedUser));
 				setIsEditing(false);
+				setIsEditingCredentials(false);
 				Alert.alert('Success', 'Profile updated successfully!');
 				setPassword('');
+				setCurrentPassword('');
 			}
 		},
 		onError: (error) => {
@@ -113,12 +158,6 @@ const CoachProfile = () => {
 
 		if (!lastName.trim()) {
 			newErrors.lastName = 'Last name is required';
-		}
-
-		if (!email.trim()) {
-			newErrors.email = 'Email is required';
-		} else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-			newErrors.email = 'Please enter a valid email';
 		}
 
 		if (!phoneNumber.trim()) {
@@ -139,38 +178,109 @@ const CoachProfile = () => {
 			newErrors.specializations = 'At least one specialization is required';
 		}
 
-		if (password && password.length < 6) {
-			newErrors.password = 'Password must be at least 6 characters';
+		if (!teachingTimeStart || !teachingTimeEnd) {
+			newErrors.teachingTime = 'Teaching time range is required';
+		} else {
+			const startHours =
+				teachingTimeStart.getHours() * 60 + teachingTimeStart.getMinutes();
+			const endHours =
+				teachingTimeEnd.getHours() * 60 + teachingTimeEnd.getMinutes();
+			if (startHours >= endHours) {
+				newErrors.teachingTime = 'End time must be after start time';
+			}
 		}
 
 		setErrors(newErrors);
 		return Object.keys(newErrors).length === 0;
 	};
 
+	const validateCredentials = () => {
+		const newErrors: Record<string, string> = {};
+
+		if (!email.trim()) {
+			newErrors.email = 'Email is required';
+		} else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+			newErrors.email = 'Please enter a valid email';
+		}
+
+		if (password) {
+			if (!currentPassword) {
+				newErrors.currentPassword =
+					'Current password is required to change password';
+			}
+			if (password.length < 6) {
+				newErrors.password = 'Password must be at least 6 characters';
+			}
+		}
+
+		setCredentialErrors(newErrors);
+		return Object.keys(newErrors).length === 0;
+	};
+
 	const handleSave = () => {
 		if (!validateForm() || !user?.id) return;
 
+		// Build coachDetails object with all fields being edited
+		// Send all fields so backend can properly update them
+		const coachDetailsInput: any = {};
+
+		// Always send specialization (required field, validated in form)
+		coachDetailsInput.specialization = specializations;
+
+		// Send yearsOfExperience if it has a value, otherwise send undefined to preserve existing
+		if (yearsOfExperience && yearsOfExperience.trim()) {
+			coachDetailsInput.yearsOfExperience = parseInt(yearsOfExperience);
+		}
+
+		// Send moreDetails - allow clearing it by sending empty string
+		coachDetailsInput.moreDetails = moreDetails.trim() || undefined;
+
+		// Send teachingDate - allow clearing by sending empty array
+		coachDetailsInput.teachingDate = teachingDates;
+
+		// Send teachingTime if both start and end are set
+		if (teachingTimeStart && teachingTimeEnd) {
+			coachDetailsInput.teachingTime = [
+				`${teachingTimeStart.getHours()}-${teachingTimeEnd.getHours()}`,
+			];
+		}
+
+		// Send clientLimit if it has a value
+		if (clientLimit && clientLimit.trim()) {
+			coachDetailsInput.clientLimit = parseInt(clientLimit);
+		}
+
 		const input: any = {
 			firstName: firstName.trim(),
+			middleName: middleName.trim() || undefined,
 			lastName: lastName.trim(),
-			email: email.trim(),
 			phoneNumber: phoneNumber.trim(),
 			dateOfBirth: dateOfBirth?.toISOString(),
 			gender,
-			coachDetails: {
-				specialization: specializations,
-				yearsOfExperience: yearsOfExperience
-					? parseInt(yearsOfExperience)
+			coachDetails:
+				Object.keys(coachDetailsInput).length > 0
+					? coachDetailsInput
 					: undefined,
-				moreDetails: moreDetails.trim() || undefined,
-				teachingDate: teachingDates.length > 0 ? teachingDates : undefined,
-				teachingTime: teachingTimes.length > 0 ? teachingTimes : undefined,
-				clientLimit: clientLimit ? parseInt(clientLimit) : undefined,
+		};
+
+		updateUserMutation({
+			variables: {
+				id: user.id,
+				input,
 			},
+		});
+	};
+
+	const handleSaveCredentials = () => {
+		if (!validateCredentials() || !user?.id) return;
+
+		const input: any = {
+			email: email.trim(),
 		};
 
 		if (password) {
 			input.password = password;
+			input.currentPassword = currentPassword;
 		}
 
 		updateUserMutation({
@@ -184,22 +294,37 @@ const CoachProfile = () => {
 	const handleCancel = () => {
 		// Reset form to original values
 		setFirstName(user?.firstName || '');
+		setMiddleName(user?.middleName || '');
 		setLastName(user?.lastName || '');
-		setEmail(user?.email || '');
 		setPhoneNumber(user?.phoneNumber?.toString() || '');
 		setDateOfBirth(user?.dateOfBirth ? new Date(user.dateOfBirth) : undefined);
 		setGender(user?.gender || '');
-		setPassword('');
 		setSpecializations(user?.coachDetails?.specialization || []);
 		setYearsOfExperience(
 			user?.coachDetails?.yearsOfExperience?.toString() || ''
 		);
 		setMoreDetails(user?.coachDetails?.moreDetails || '');
-		setTeachingDates(user?.coachDetails?.teachingDate || []);
-		setTeachingTimes(user?.coachDetails?.teachingTime || []);
+		setTeachingDates(
+			(user?.coachDetails?.teachingDate?.filter(
+				(d): d is string => d !== null
+			) || []) as string[]
+		);
+		const teachingTime = parseTeachingTime(
+			user?.coachDetails?.teachingTime as (string | null)[] | undefined
+		);
+		setTeachingTimeStart(teachingTime.start);
+		setTeachingTimeEnd(teachingTime.end);
 		setClientLimit(user?.coachDetails?.clientLimit?.toString() || '');
 		setErrors({});
 		setIsEditing(false);
+	};
+
+	const handleCancelCredentials = () => {
+		setEmail(user?.email || '');
+		setPassword('');
+		setCurrentPassword('');
+		setCredentialErrors({});
+		setIsEditingCredentials(false);
 	};
 
 	const toggleSpecialization = (goal: string) => {
@@ -221,15 +346,6 @@ const CoachProfile = () => {
 		});
 	};
 
-	const toggleTeachingTime = (time: string) => {
-		setTeachingTimes((prev) => {
-			if (prev.includes(time)) {
-				return prev.filter((t) => t !== time);
-			}
-			return [...prev, time];
-		});
-	};
-
 	return (
 		<FixedView className='flex-1 bg-bg-darker'>
 			<TabHeader showCoachIcon={false} />
@@ -240,7 +356,9 @@ const CoachProfile = () => {
 			>
 				<View className='flex-row items-center justify-between mb-6'>
 					<View>
-						<Text className='text-3xl font-bold text-text-primary'>Profile</Text>
+						<Text className='text-3xl font-bold text-text-primary'>
+							Profile
+						</Text>
 						<Text className='text-text-secondary mt-1'>
 							Manage your account details
 						</Text>
@@ -286,6 +404,16 @@ const CoachProfile = () => {
 						/>
 
 						<Input
+							label='Middle Name'
+							placeholder='Enter your middle name (optional)'
+							value={middleName}
+							onChangeText={(text) => {
+								setMiddleName(text);
+							}}
+							autoCapitalize='words'
+						/>
+
+						<Input
 							label='Last Name'
 							placeholder='Enter your last name'
 							value={lastName}
@@ -295,20 +423,6 @@ const CoachProfile = () => {
 							}}
 							autoCapitalize='words'
 							error={errors.lastName}
-						/>
-
-						<Input
-							label='Email'
-							placeholder='Enter your email'
-							value={email}
-							onChangeText={(text) => {
-								setEmail(text);
-								setErrors({ ...errors, email: '' });
-							}}
-							keyboardType='email-address'
-							autoCapitalize='none'
-							autoComplete='email'
-							error={errors.email}
 						/>
 
 						<Input
@@ -345,20 +459,6 @@ const CoachProfile = () => {
 							}}
 							placeholder='Select your gender'
 							error={errors.gender}
-						/>
-
-						<Input
-							label='Password (optional)'
-							placeholder='Enter new password (leave blank to keep current)'
-							value={password}
-							onChangeText={(text) => {
-								setPassword(text);
-								setErrors({ ...errors, password: '' });
-							}}
-							secureTextEntry
-							autoCapitalize='none'
-							autoComplete='password-new'
-							error={errors.password}
 						/>
 
 						{/* Coach Details Section */}
@@ -475,43 +575,34 @@ const CoachProfile = () => {
 
 							<View className='mb-4'>
 								<Text className='text-text-primary font-semibold mb-2'>
-									Teaching Times
+									Teaching Time
 								</Text>
-								<View className='flex-row flex-wrap gap-2'>
-									{timeOptions.map((option) => {
-										const isSelected = teachingTimes.includes(option.value);
-										return (
-											<TouchableOpacity
-												key={option.value}
-												onPress={() => toggleTeachingTime(option.value)}
-												className={`px-4 py-2 rounded-lg border-2 ${
-													isSelected
-														? 'bg-[#F9C513]/20 border-[#F9C513]'
-														: 'bg-bg-darker border-bg-primary'
-												}`}
-											>
-												<View className='flex-row items-center'>
-													{isSelected && (
-														<Ionicons
-															name='checkmark-circle'
-															size={18}
-															color='#F9C513'
-															style={{ marginRight: 6 }}
-														/>
-													)}
-													<Text
-														className={`font-medium ${
-															isSelected
-																? 'text-[#F9C513]'
-																: 'text-text-secondary'
-														}`}
-													>
-														{option.label}
-													</Text>
-												</View>
-											</TouchableOpacity>
-										);
-									})}
+								<View className='flex-row gap-3'>
+									<View className='flex-1'>
+										<TimePicker
+											label='Start Time'
+											value={teachingTimeStart}
+											onChange={(date) => {
+												setTeachingTimeStart(date);
+												setErrors({ ...errors, teachingTime: '' });
+											}}
+											placeholder='Select start time'
+											error={errors.teachingTime}
+											containerClassName='mb-0'
+										/>
+									</View>
+									<View className='flex-1'>
+										<TimePicker
+											label='End Time'
+											value={teachingTimeEnd}
+											onChange={(date) => {
+												setTeachingTimeEnd(date);
+												setErrors({ ...errors, teachingTime: '' });
+											}}
+											placeholder='Select end time'
+											containerClassName='mb-0'
+										/>
+									</View>
 								</View>
 							</View>
 
@@ -545,13 +636,15 @@ const CoachProfile = () => {
 				) : (
 					<>
 						<View className='bg-bg-primary rounded-xl p-5 mb-4'>
-							<Text className='text-xl font-semibold text-text-primary mb-4'>
-								Personal Information
-							</Text>
+							<View className='flex-row items-center justify-between mb-4'>
+								<Text className='text-xl font-semibold text-text-primary'>
+									Personal Information
+								</Text>
+							</View>
 							<View className='mb-3'>
 								<Text className='text-text-secondary text-sm mb-1'>Phone</Text>
 								<Text className='text-text-primary font-medium'>
-									{user?.phoneNumber || 'Not provided'}
+									{user?.phoneNumber?.toString() || 'Not provided'}
 								</Text>
 							</View>
 							<View className='mb-3'>
@@ -571,6 +664,104 @@ const CoachProfile = () => {
 								</Text>
 							</View>
 						</View>
+
+						<View className='bg-bg-primary rounded-xl p-5 mb-4'>
+							<View className='flex-row items-center justify-between mb-4'>
+								<Text className='text-xl font-semibold text-text-primary'>
+									Account Credentials
+								</Text>
+								<TouchableOpacity
+									onPress={() => setIsEditingCredentials(true)}
+									className='flex-row items-center'
+								>
+									<Ionicons name='create-outline' size={18} color='#F9C513' />
+									<Text className='text-[#F9C513] font-semibold ml-1'>
+										Edit
+									</Text>
+								</TouchableOpacity>
+							</View>
+							<View className='mb-3'>
+								<Text className='text-text-secondary text-sm mb-1'>Email</Text>
+								<Text className='text-text-primary font-medium'>
+									{user?.email || 'Not provided'}
+								</Text>
+							</View>
+							<View>
+								<Text className='text-text-secondary text-sm mb-1'>
+									Password
+								</Text>
+								<Text className='text-text-primary font-medium'>••••••••</Text>
+							</View>
+						</View>
+
+						{isEditingCredentials && (
+							<View className='bg-bg-primary rounded-xl p-5 mb-4 gap-4'>
+								<Text className='text-xl font-semibold text-text-primary mb-2'>
+									Edit Credentials
+								</Text>
+								<Input
+									label='Email'
+									placeholder='Enter your email'
+									value={email}
+									onChangeText={(text) => {
+										setEmail(text);
+										setCredentialErrors({ ...credentialErrors, email: '' });
+									}}
+									keyboardType='email-address'
+									autoCapitalize='none'
+									autoComplete='email'
+									error={credentialErrors.email}
+								/>
+
+								<Input
+									label='Current Password'
+									placeholder='Enter your current password'
+									value={currentPassword}
+									onChangeText={(text) => {
+										setCurrentPassword(text);
+										setCredentialErrors({
+											...credentialErrors,
+											currentPassword: '',
+										});
+									}}
+									secureTextEntry
+									autoCapitalize='none'
+									error={credentialErrors.currentPassword}
+								/>
+
+								<Input
+									label='New Password (optional)'
+									placeholder='Enter new password (leave blank to keep current)'
+									value={password}
+									onChangeText={(text) => {
+										setPassword(text);
+										setCredentialErrors({ ...credentialErrors, password: '' });
+									}}
+									secureTextEntry
+									autoCapitalize='none'
+									autoComplete='password-new'
+									error={credentialErrors.password}
+								/>
+
+								<View className='flex-row gap-3 mt-2'>
+									<GradientButton
+										onPress={handleCancelCredentials}
+										variant='secondary'
+										style={{ flex: 1 }}
+										disabled={loading}
+									>
+										Cancel
+									</GradientButton>
+									<GradientButton
+										onPress={handleSaveCredentials}
+										loading={loading}
+										style={{ flex: 1 }}
+									>
+										{loading ? 'Saving...' : 'Save Changes'}
+									</GradientButton>
+								</View>
+							</View>
+						)}
 
 						{user?.coachDetails && (
 							<View className='bg-bg-primary rounded-xl p-5'>
@@ -603,13 +794,15 @@ const CoachProfile = () => {
 											Years of Experience
 										</Text>
 										<Text className='text-text-primary font-medium'>
-											{user.coachDetails.yearsOfExperience} years
+											{user.coachDetails.yearsOfExperience.toString()} years
 										</Text>
 									</View>
 								)}
 								{user.coachDetails.moreDetails && (
 									<View className='mb-4'>
-										<Text className='text-text-secondary text-sm mb-1'>Bio</Text>
+										<Text className='text-text-secondary text-sm mb-1'>
+											Bio
+										</Text>
 										<Text className='text-text-primary font-medium'>
 											{user.coachDetails.moreDetails}
 										</Text>

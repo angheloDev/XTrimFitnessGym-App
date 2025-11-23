@@ -24,8 +24,6 @@ const First = () => {
 	const router = useRouter();
 	const { data, updateData } = useOnboarding();
 
-	const [firstName, setFirstName] = useState(data.firstName || '');
-	const [lastName, setLastName] = useState(data.lastName || '');
 	const [phoneNumber, setPhoneNumber] = useState(data.phoneNumber || '');
 	const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(
 		data.dateOfBirth
@@ -36,14 +34,6 @@ const First = () => {
 
 	const validateForm = () => {
 		const newErrors: Record<string, string> = {};
-
-		if (!firstName.trim()) {
-			newErrors.firstName = 'First name is required';
-		}
-
-		if (!lastName.trim()) {
-			newErrors.lastName = 'Last name is required';
-		}
 
 		if (!phoneNumber.trim()) {
 			newErrors.phoneNumber = 'Phone number is required';
@@ -71,8 +61,6 @@ const First = () => {
 	const handleContinue = () => {
 		if (validateForm()) {
 			updateData({
-				firstName: firstName.trim(),
-				lastName: lastName.trim(),
 				phoneNumber: phoneNumber.trim(),
 				dateOfBirth,
 				gender,
@@ -91,6 +79,7 @@ const First = () => {
 				<ScrollView
 					contentContainerClassName='flex-grow px-5 py-8'
 					keyboardShouldPersistTaps='handled'
+					showsVerticalScrollIndicator={false}
 				>
 				<Text className='text-3xl font-bold mb-2 text-text-primary'>
 					Personal Information
@@ -100,30 +89,6 @@ const First = () => {
 				</Text>
 
 				<View className='gap-4'>
-					<Input
-						label='First Name'
-						placeholder='Enter your first name'
-						value={firstName}
-						onChangeText={(text) => {
-							setFirstName(text);
-							setErrors({ ...errors, firstName: '' });
-						}}
-						autoCapitalize='words'
-						error={errors.firstName}
-					/>
-
-					<Input
-						label='Last Name'
-						placeholder='Enter your last name'
-						value={lastName}
-						onChangeText={(text) => {
-							setLastName(text);
-							setErrors({ ...errors, lastName: '' });
-						}}
-						autoCapitalize='words'
-						error={errors.lastName}
-					/>
-
 					<Input
 						label='Phone Number'
 						placeholder='Enter your phone number'
@@ -161,13 +126,13 @@ const First = () => {
 					/>
 
 					<View className='flex-row gap-3 mt-4'>
-						<GradientButton
+						{/* <GradientButton
 							onPress={() => router.back()}
 							className='flex-1'
 							variant='secondary'
 						>
 							Back
-						</GradientButton>
+						</GradientButton> */}
 						<GradientButton onPress={handleContinue} className='flex-1'>
 							Continue
 						</GradientButton>

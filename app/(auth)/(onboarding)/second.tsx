@@ -1,6 +1,6 @@
 import FixedView from '@/components/FixedView';
 import GradientButton from '@/components/GradientButton';
-import Input from '@/components/Input';
+import TimePicker from '@/components/TimePicker';
 import Select from '@/components/Select';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useRouter } from 'expo-router';
@@ -23,9 +23,9 @@ const fitnessGoalOptions = [
 ];
 
 const physiqueGoalTypeOptions = [
-	{ label: 'Ectomorph', value: 'Ectomorph' },
-	{ label: 'Endomorph', value: 'Endomorph' },
-	{ label: 'Mesomorph', value: 'Mesomorph' },
+	{ label: 'Ectomorph (lean build, hard to gain muscle)', value: 'Ectomorph' },
+	{ label: 'Mesomorph (naturally athletic, builds muscle easily)', value: 'Mesomorph' },
+	{ label: 'Endomorph (bulky build, gains weight easily)', value: 'Endomorph' },
 ];
 
 const Second = () => {
@@ -38,8 +38,44 @@ const Second = () => {
 	const [physiqueGoalType, setPhysiqueGoalType] = useState(
 		data.physiqueGoalType || ''
 	);
-	const [workOutTimeStart, setWorkOutTimeStart] = useState('');
-	const [workOutTimeEnd, setWorkOutTimeEnd] = useState('');
+	
+	// Parse existing workout time if available
+	const parseWorkoutTime = (timeStr?: string[]) => {
+		if (!timeStr || timeStr.length === 0) {
+			// Default: 8 AM start, 6 PM end
+			const startDate = new Date();
+			startDate.setHours(8, 0, 0, 0);
+			const endDate = new Date();
+			endDate.setHours(18, 0, 0, 0);
+			return { start: startDate, end: endDate };
+		}
+		const timeRange = timeStr[0];
+		if (timeRange.includes('-')) {
+			const [start, end] = timeRange.split('-');
+			// Convert 24h format to Date objects
+			const startHour = parseInt(start);
+			const endHour = parseInt(end);
+			const startDate = new Date();
+			startDate.setHours(startHour, 0, 0, 0);
+			const endDate = new Date();
+			endDate.setHours(endHour, 0, 0, 0);
+			return { start: startDate, end: endDate };
+		}
+		// Default: 8 AM start, 6 PM end
+		const startDate = new Date();
+		startDate.setHours(8, 0, 0, 0);
+		const endDate = new Date();
+		endDate.setHours(18, 0, 0, 0);
+		return { start: startDate, end: endDate };
+	};
+	
+	const initialWorkoutTime = parseWorkoutTime(data.workOutTime);
+	const [workOutTimeStart, setWorkOutTimeStart] = useState<Date | undefined>(
+		initialWorkoutTime.start
+	);
+	const [workOutTimeEnd, setWorkOutTimeEnd] = useState<Date | undefined>(
+		initialWorkoutTime.end
+	);
 
 	const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -68,9 +104,9 @@ const Second = () => {
 		if (!workOutTimeStart || !workOutTimeEnd) {
 			newErrors.workOutTime = 'Workout time range is required';
 		} else {
-			const start = parseInt(workOutTimeStart);
-			const end = parseInt(workOutTimeEnd);
-			if (start >= end) {
+			const startHours = workOutTimeStart.getHours() * 60 + workOutTimeStart.getMinutes();
+			const endHours = workOutTimeEnd.getHours() * 60 + workOutTimeEnd.getMinutes();
+			if (startHours >= endHours) {
 				newErrors.workOutTime = 'End time must be after start time';
 			}
 		}
@@ -80,13 +116,16 @@ const Second = () => {
 	};
 
 	const handleContinue = () => {
-		if (validateForm()) {
+		if (validateForm() && workOutTimeStart && workOutTimeEnd) {
+			// Convert time to 24-hour format string for storage
+			const startHour = workOutTimeStart.getHours();
+			const endHour = workOutTimeEnd.getHours();
 			updateData({
 				fitnessGoal,
 				physiqueGoalType,
-				workOutTime: [`${workOutTimeStart}-${workOutTimeEnd}`],
+				workOutTime: [`${startHour}-${endHour}`],
 			});
-			router.push('/(auth)/(onboarding)/third');
+			router.push('/(auth)/(onboarding)/fourth');
 		}
 	};
 
@@ -100,6 +139,7 @@ const Second = () => {
 				<ScrollView
 					contentContainerClassName='flex-grow px-5 py-8'
 					keyboardShouldPersistTaps='handled'
+					showsVerticalScrollIndicator={false}
 				>
 				<Text className='text-3xl font-bold mb-2 text-text-primary'>
 					Fitness Goals
@@ -156,41 +196,37 @@ const Second = () => {
 						error={errors.physiqueGoalType}
 					/>
 
-					<View>
+					<View className='mb-4'>
 						<Text className='text-text-primary text-sm font-medium mb-2'>
 							Preferred Workout Time
 						</Text>
 						<View className='flex-row gap-3'>
 							<View className='flex-1'>
-								<Input
-									label='Start Time (24h format)'
-									placeholder='e.g., 08'
+								<TimePicker
+									label='Start Time'
 									value={workOutTimeStart}
-									onChangeText={(text) => {
-										setWorkOutTimeStart(text.replace(/\D/g, '').slice(0, 2));
+									onChange={(date) => {
+										setWorkOutTimeStart(date);
 										setErrors({ ...errors, workOutTime: '' });
 									}}
-									keyboardType='number-pad'
+									placeholder='Select start time'
+									error={errors.workOutTime}
+									containerClassName='mb-0'
 								/>
 							</View>
 							<View className='flex-1'>
-								<Input
-									label='End Time (24h format)'
-									placeholder='e.g., 10'
+								<TimePicker
+									label='End Time'
 									value={workOutTimeEnd}
-									onChangeText={(text) => {
-										setWorkOutTimeEnd(text.replace(/\D/g, '').slice(0, 2));
+									onChange={(date) => {
+										setWorkOutTimeEnd(date);
 										setErrors({ ...errors, workOutTime: '' });
 									}}
-									keyboardType='number-pad'
+									placeholder='Select end time'
+									containerClassName='mb-0'
 								/>
 							</View>
 						</View>
-						{errors.workOutTime && (
-							<Text className='text-red-500 text-sm mt-1'>
-								{errors.workOutTime}
-							</Text>
-						)}
 					</View>
 
 					<View className='flex-row gap-3 mt-4'>

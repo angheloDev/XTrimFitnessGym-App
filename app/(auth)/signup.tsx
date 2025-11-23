@@ -42,23 +42,32 @@ const SignUp = () => {
 		CreateUserMutationVariables
 	>(CREATE_USER_MUTATION, {
 		onCompleted: async (data) => {
-			// Convert GraphQL User to Redux User format
-			const user = convertGraphQLUser(data.createUser.user);
-			dispatch(setUser(user));
+			try {
+				// Convert GraphQL User to Redux User format
+				const user = convertGraphQLUser(data.createUser.user);
+				dispatch(setUser(user));
 
-			// Store token in AsyncStorage
-			if (data.createUser.token) {
-				console.log('✅ [Signup] Storing token in AsyncStorage');
-				await storage.setItem('auth_token', data.createUser.token);
-				console.log('✅ [Signup] Token stored successfully');
-			} else {
-				console.warn('⚠️ [Signup] No token received in signup response');
+				// Store token in AsyncStorage
+				if (data.createUser.token) {
+					console.log('✅ [Signup] Storing token in AsyncStorage');
+					await storage.setItem('auth_token', data.createUser.token);
+					console.log('✅ [Signup] Token stored successfully');
+				} else {
+					console.warn('⚠️ [Signup] No token received in signup response');
+				}
+
+				// Let AuthLayout handle the redirect automatically
+				// It will redirect members without hasEnteredDetails to onboarding
+			} catch (error) {
+				console.error('Signup completion error:', error);
+				Alert.alert(
+					'Error',
+					'Account created successfully, but failed to save session. Please try logging in.'
+				);
 			}
-
-			// Navigate to onboarding
-			router.replace('/(auth)/(onboarding)/first');
 		},
 		onError: (error) => {
+			console.error('Signup error:', error);
 			Alert.alert(
 				'Sign Up Failed',
 				error.message || 'Something went wrong. Please try again.'
@@ -133,6 +142,7 @@ const SignUp = () => {
 					contentContainerClassName='flex-grow justify-center px-5 py-8'
 					keyboardShouldPersistTaps='handled'
 					showsVerticalScrollIndicator={false}
+					scrollEnabled={!loading}
 				>
 					<View className='items-center mb-6'>
 						<Image
@@ -146,7 +156,7 @@ const SignUp = () => {
 						Create your account
 					</Text>
 
-					<View className='gap-4'>
+					<View className='gap-4' pointerEvents={loading ? 'none' : 'auto'}>
 						<Input
 							label='First Name'
 							placeholder='Enter your first name'
@@ -157,6 +167,7 @@ const SignUp = () => {
 							}}
 							autoCapitalize='words'
 							error={errors.firstName}
+							editable={!loading}
 						/>
 
 						<Input
@@ -167,6 +178,7 @@ const SignUp = () => {
 								setMiddleName(text);
 							}}
 							autoCapitalize='words'
+							editable={!loading}
 						/>
 
 						<Input
@@ -179,6 +191,7 @@ const SignUp = () => {
 							}}
 							autoCapitalize='words'
 							error={errors.lastName}
+							editable={!loading}
 						/>
 
 						<Input
@@ -193,6 +206,7 @@ const SignUp = () => {
 							autoCapitalize='none'
 							autoComplete='email'
 							error={errors.email}
+							editable={!loading}
 						/>
 
 						<Input
@@ -207,6 +221,7 @@ const SignUp = () => {
 							autoCapitalize='none'
 							autoComplete='password-new'
 							error={errors.password}
+							editable={!loading}
 						/>
 
 						<Input
@@ -221,14 +236,16 @@ const SignUp = () => {
 							autoCapitalize='none'
 							autoComplete='password-new'
 							error={errors.confirmPassword}
+							editable={!loading}
 						/>
 
 						<GradientButton
 							onPress={handleSignUp}
 							loading={loading}
 							className='mt-2.5'
+							disabled={loading}
 						>
-							{loading ? 'Creating Account...' : 'Sign Up'}
+							{loading ? 'Loading...' : 'Sign Up'}
 						</GradientButton>
 
 						<View className='mt-6 flex-row justify-center items-center'>

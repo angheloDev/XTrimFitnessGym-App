@@ -2,8 +2,6 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 export interface OnboardingData {
 	// Screen 1
-	firstName?: string;
-	lastName?: string;
 	phoneNumber?: string;
 	dateOfBirth?: Date;
 	gender?: string;
@@ -12,10 +10,6 @@ export interface OnboardingData {
 	fitnessGoal?: string[];
 	physiqueGoalType?: string;
 	workOutTime?: string[];
-
-	// Screen 3
-	email?: string;
-	password?: string;
 
 	// Screen 4
 	agreedToTermsAndConditions?: boolean;

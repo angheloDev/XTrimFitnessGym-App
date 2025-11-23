@@ -51,22 +51,13 @@ const Login = () => {
 					console.warn('⚠️ [Login] No token received in login response');
 				}
 
-				// Small delay to ensure Redux state is updated
-				await new Promise((resolve) => setTimeout(resolve, 100));
-
-				// Navigate based on user role
-				if (user.role === 'coach') {
-					router.replace('/(coach)/dashboard');
-				} else if (user.role === 'member') {
-					router.replace('/(member)/dashboard');
-				} else {
-					router.replace('/(auth)/(onboarding)/first');
-				}
+				// Let AuthLayout handle the redirect automatically
+				// It will redirect based on user role and hasEnteredDetails status
 			} catch (error) {
-				console.error('Navigation error:', error);
+				console.error('Login completion error:', error);
 				Alert.alert(
 					'Error',
-					'Failed to navigate after login. Please try again.'
+					'Login successful, but failed to save session. Please try again.'
 				);
 			}
 		},
@@ -132,9 +123,11 @@ const Login = () => {
 				<ScrollView
 					contentContainerClassName='flex-grow justify-center px-5 py-8'
 					keyboardShouldPersistTaps='handled'
+					showsVerticalScrollIndicator={false}
 				>
 					<View className='items-center mb-6'>
 						<Image
+							// eslint-disable-next-line @typescript-eslint/no-require-imports
 							source={require('@/assets/logos/XTFG_logo.PNG')}
 							style={{ width: 200, height: 100 }}
 							contentFit='contain'
@@ -144,7 +137,7 @@ const Login = () => {
 						Sign in to your account
 					</Text>
 
-					<View className='gap-4'>
+					<View className='gap-4' pointerEvents={loading ? 'none' : 'auto'}>
 						<Input
 							label='Email'
 							placeholder='Enter your email'
@@ -157,6 +150,7 @@ const Login = () => {
 							autoCapitalize='none'
 							autoComplete='email'
 							error={emailError}
+							editable={!loading}
 						/>
 
 						<Input
@@ -171,14 +165,16 @@ const Login = () => {
 							autoCapitalize='none'
 							autoComplete='password'
 							error={passwordError}
+							editable={!loading}
 						/>
 
 						<GradientButton
 							onPress={handleLogin}
 							loading={loading}
 							className='mt-2.5'
+							disabled={loading}
 						>
-							{loading ? 'Logging in...' : 'Log in'}
+							{loading ? 'Loading...' : 'Log in'}
 						</GradientButton>
 
 						<View className='mt-6 flex-row justify-center items-center'>

@@ -1,18 +1,22 @@
 import FixedView from '@/components/FixedView';
 import TabHeader from '@/components/TabHeader';
 import { useAuth } from '@/contexts/AuthContext';
-import { GET_COACH_SESSIONS_QUERY, GET_USERS_QUERY } from '@/graphql/queries';
-import { useQuery } from '@apollo/client/react';
-import React from 'react';
 import {
-	ScrollView,
-	Text,
-	View,
-	FlatList,
-	TouchableOpacity,
-} from 'react-native';
+	GET_COACH_SESSIONS_QUERY,
+	GET_PENDING_COACH_REQUESTS_QUERY,
+	GET_USERS_QUERY,
+} from '@/graphql/queries';
+import { useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import React, { useMemo } from 'react';
+import {
+	FlatList,
+	ScrollView,
+	Text,
+	TouchableOpacity,
+	View,
+} from 'react-native';
 
 const CoachDashboard = () => {
 	const { user, logout } = useAuth();
@@ -35,16 +39,56 @@ const CoachDashboard = () => {
 		}
 	);
 
-	const sessions = sessionsData?.getCoachSessions || [];
+	const { data: requestsData } = useQuery(GET_PENDING_COACH_REQUESTS_QUERY, {
+		fetchPolicy: 'cache-and-network',
+	});
+
+	const sessions = (sessionsData as any)?.getCoachSessions || [];
 	// Filter to only show coach's own clients
-	const allClients = clientsData?.getUsers || [];
+	const allClients = (clientsData as any)?.getUsers || [];
 	const clients = allClients.filter((client: any) =>
 		user?.coachDetails?.clientsIds?.includes(client.id)
 	);
 	const upcomingSessions = sessions.filter(
-		(s: any) =>
-			new Date(s.date) >= new Date() && s.status === 'scheduled'
+		(s: any) => new Date(s.date) >= new Date() && s.status === 'scheduled'
 	);
+
+	const pendingRequests = (requestsData as any)?.getPendingCoachRequests || [];
+
+	// Calculate sessions this month
+	const sessionsThisMonth = useMemo(() => {
+		const now = new Date();
+		const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+		return sessions.filter((s: any) => {
+			const sessionDate = new Date(s.date);
+			return sessionDate >= startOfMonth && sessionDate <= now;
+		}).length;
+	}, [sessions]);
+
+	// Calculate completed sessions this month
+	const completedThisMonth = useMemo(() => {
+		const now = new Date();
+		const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+		return sessions.filter((s: any) => {
+			const sessionDate = new Date(s.date);
+			return (
+				sessionDate >= startOfMonth &&
+				sessionDate <= now &&
+				s.status === 'completed'
+			);
+		}).length;
+	}, [sessions]);
+
+	// Client capacity
+	const clientCapacity = useMemo(() => {
+		const currentClients = clients.length;
+		const limit = user?.coachDetails?.clientLimit || 0;
+		return {
+			current: currentClients,
+			limit,
+			percentage: limit > 0 ? (currentClients / limit) * 100 : 0,
+		};
+	}, [clients.length, user?.coachDetails?.clientLimit]);
 
 	const formatDate = (dateString: string) => {
 		const date = new Date(dateString);
@@ -79,23 +123,193 @@ const CoachDashboard = () => {
 
 				{/* Quick Stats */}
 				<View className='flex-row gap-3 mb-6'>
-					<View className='flex-1 bg-bg-primary rounded-xl p-4'>
-						<Text className='text-text-secondary text-sm mb-1'>
-							Upcoming Sessions
-						</Text>
+					<View className='flex-1 bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20'>
+						<View className='flex-row items-center mb-2'>
+							<Ionicons name='calendar' size={18} color='#F9C513' />
+							<Text className='text-text-secondary text-xs ml-2'>Upcoming</Text>
+						</View>
 						<Text className='text-3xl font-bold text-[#F9C513]'>
 							{upcomingSessions.length}
 						</Text>
 					</View>
-					<View className='flex-1 bg-bg-primary rounded-xl p-4'>
-						<Text className='text-text-secondary text-sm mb-1'>
-							Total Clients
-						</Text>
+					<View className='flex-1 bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20'>
+						<View className='flex-row items-center mb-2'>
+							<Ionicons name='people' size={18} color='#F9C513' />
+							<Text className='text-text-secondary text-xs ml-2'>Clients</Text>
+						</View>
 						<Text className='text-3xl font-bold text-[#F9C513]'>
 							{clients.length}
 						</Text>
 					</View>
 				</View>
+
+				{/* Coach Performance Insights */}
+				<View className='bg-bg-primary rounded-xl p-5 mb-6 border border-[#F9C513]/20'>
+					<View className='flex-row items-center mb-4'>
+						<View className='bg-[#F9C513]/20 rounded-lg p-2 mr-3'>
+							<Ionicons name='stats-chart' size={24} color='#F9C513' />
+						</View>
+						<Text className='text-xl font-semibold text-text-primary'>
+							Performance Insights
+						</Text>
+					</View>
+
+					<View className='gap-4'>
+						<View className='flex-row items-center justify-between pb-3 border-b border-bg-darker/50'>
+							<View className='flex-row items-center flex-1'>
+								<Ionicons
+									name='checkmark-circle'
+									size={18}
+									color='#8E8E93'
+									style={{ marginRight: 8 }}
+								/>
+								<Text className='text-text-secondary text-sm'>
+									Sessions This Month
+								</Text>
+							</View>
+							<Text className='text-text-primary font-semibold'>
+								{sessionsThisMonth}
+							</Text>
+						</View>
+
+						<View className='flex-row items-center justify-between pb-3 border-b border-bg-darker/50'>
+							<View className='flex-row items-center flex-1'>
+								<Ionicons
+									name='trophy'
+									size={18}
+									color='#8E8E93'
+									style={{ marginRight: 8 }}
+								/>
+								<Text className='text-text-secondary text-sm'>
+									Completed This Month
+								</Text>
+							</View>
+							<Text className='text-text-primary font-semibold'>
+								{completedThisMonth}
+							</Text>
+						</View>
+
+						{user?.coachDetails?.ratings && (
+							<View className='flex-row items-center justify-between pb-3 border-b border-bg-darker/50'>
+								<View className='flex-row items-center flex-1'>
+									<Ionicons
+										name='star'
+										size={18}
+										color='#8E8E93'
+										style={{ marginRight: 8 }}
+									/>
+									<Text className='text-text-secondary text-sm'>
+										Average Rating
+									</Text>
+								</View>
+								<View className='flex-row items-center'>
+									<Text className='text-text-primary font-semibold mr-2'>
+										{user.coachDetails.ratings.toFixed(1)}
+									</Text>
+									<Ionicons name='star' size={16} color='#F9C513' />
+								</View>
+							</View>
+						)}
+
+						<View className='flex-row items-center justify-between'>
+							<View className='flex-row items-center flex-1'>
+								<Ionicons
+									name='people-circle'
+									size={18}
+									color='#8E8E93'
+									style={{ marginRight: 8 }}
+								/>
+								<Text className='text-text-secondary text-sm'>
+									Client Capacity
+								</Text>
+							</View>
+							<View className='flex-row items-center'>
+								<Text className='text-text-primary font-semibold mr-2'>
+									{clientCapacity.current}
+									{clientCapacity.limit > 0 && ` / ${clientCapacity.limit}`}
+								</Text>
+								{clientCapacity.limit > 0 && (
+									<View className='w-16 bg-bg-darker rounded-full h-2 ml-2'>
+										<View
+											className={`h-2 rounded-full ${
+												clientCapacity.percentage >= 90
+													? 'bg-red-500'
+													: clientCapacity.percentage >= 70
+														? 'bg-yellow-500'
+														: 'bg-green-500'
+											}`}
+											style={{
+												width: `${Math.min(100, clientCapacity.percentage)}%`,
+											}}
+										/>
+									</View>
+								)}
+							</View>
+						</View>
+					</View>
+				</View>
+
+				{/* Specializations */}
+				{user?.coachDetails?.specialization &&
+					user.coachDetails.specialization.length > 0 && (
+						<View className='bg-bg-primary rounded-xl p-5 mb-6 border border-[#F9C513]/20'>
+							<View className='flex-row items-center mb-4'>
+								<View className='bg-[#F9C513]/20 rounded-lg p-2 mr-3'>
+									<Ionicons name='fitness' size={24} color='#F9C513' />
+								</View>
+								<Text className='text-xl font-semibold text-text-primary'>
+									Specializations
+								</Text>
+							</View>
+							<View className='flex-row flex-wrap gap-2'>
+								{user.coachDetails.specialization.map(
+									(spec: string, index: number) => (
+										<View
+											key={index}
+											className='bg-[#F9C513]/10 px-3 py-2 rounded-full border border-[#F9C513]/30'
+										>
+											<Text className='text-[#F9C513] text-sm font-medium'>
+												{spec}
+											</Text>
+										</View>
+									)
+								)}
+							</View>
+						</View>
+					)}
+
+				{/* Pending Requests */}
+				{pendingRequests.length > 0 && (
+					<View className='mb-6'>
+						<View className='flex-row justify-between items-center mb-4'>
+							<View className='flex-row items-center'>
+								<View className='bg-[#F9C513]/20 rounded-lg p-2 mr-2'>
+									<Ionicons name='mail' size={24} color='#F9C513' />
+								</View>
+								<Text className='text-xl font-semibold text-text-primary'>
+									Pending Requests
+								</Text>
+							</View>
+							<View className='bg-red-500/20 px-3 py-1 rounded-full border border-red-500/30'>
+								<Text className='text-red-400 text-xs font-semibold'>
+									{pendingRequests.length} NEW
+								</Text>
+							</View>
+						</View>
+						<TouchableOpacity
+							onPress={() => router.push('/(coach)/requests')}
+							className='bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20'
+						>
+							<Text className='text-text-primary font-semibold mb-1'>
+								You have {pendingRequests.length} pending client request
+								{pendingRequests.length !== 1 ? 's' : ''}
+							</Text>
+							<Text className='text-[#F9C513] text-sm font-medium'>
+								Tap to review →
+							</Text>
+						</TouchableOpacity>
+					</View>
+				)}
 
 				{/* Upcoming Sessions */}
 				<View className='mb-6'>
@@ -108,24 +322,18 @@ const CoachDashboard = () => {
 								Upcoming Sessions
 							</Text>
 						</View>
-						<TouchableOpacity
-							onPress={() => router.push('/(coach)/schedule')}
-						>
+						<TouchableOpacity onPress={() => router.push('/(coach)/schedule')}>
 							<Text className='text-[#F9C513] font-semibold'>View All</Text>
 						</TouchableOpacity>
 					</View>
 
 					{sessionsLoading ? (
-						<View className='items-center justify-center py-10'>
+						<View className='items-center justify-center py-10 bg-bg-primary rounded-xl border border-[#F9C513]/20'>
 							<Text className='text-text-secondary'>Loading...</Text>
 						</View>
 					) : upcomingSessions.length === 0 ? (
-						<View className='bg-bg-primary rounded-xl p-6 items-center'>
-							<Ionicons
-								name='calendar-outline'
-								size={48}
-								color='#8E8E93'
-							/>
+						<View className='bg-bg-primary rounded-xl p-6 items-center border border-[#F9C513]/20'>
+							<Ionicons name='calendar-outline' size={48} color='#8E8E93' />
 							<Text className='text-text-secondary mt-4 text-center'>
 								No upcoming sessions
 							</Text>
@@ -136,8 +344,8 @@ const CoachDashboard = () => {
 							keyExtractor={(item) => item.id}
 							scrollEnabled={false}
 							renderItem={({ item }) => (
-								<View className='bg-bg-primary rounded-xl p-4 mb-3 flex-row'>
-									<View className='bg-bg-darker rounded-lg p-3 mr-3 items-center justify-center min-w-[80]'>
+								<View className='bg-bg-primary rounded-xl p-4 mb-3 flex-row border border-[#F9C513]/20'>
+									<View className='bg-bg-darker rounded-lg p-3 mr-3 items-center justify-center min-w-[80] border border-[#F9C513]/10'>
 										<Text className='text-[#F9C513] font-bold text-lg'>
 											{item.startTime}
 										</Text>
@@ -150,18 +358,18 @@ const CoachDashboard = () => {
 											{item.name}
 										</Text>
 										<View className='flex-row items-center mb-1'>
-											<Ionicons
-												name='location'
-												size={14}
-												color='#8E8E93'
-											/>
+											<Ionicons name='location' size={14} color='#8E8E93' />
 											<Text className='text-text-secondary text-sm ml-1'>
 												{item.gymArea}
 											</Text>
 										</View>
-										<Text className='text-text-secondary text-sm'>
-											{item.clients?.length || 0} client(s)
-										</Text>
+										<View className='flex-row items-center'>
+											<Ionicons name='people' size={14} color='#8E8E93' />
+											<Text className='text-text-secondary text-sm ml-1'>
+												{String(item.clients?.length || 0)} client
+												{item.clients?.length !== 1 ? 's' : ''}
+											</Text>
+										</View>
 									</View>
 								</View>
 							)}
@@ -177,7 +385,7 @@ const CoachDashboard = () => {
 					<View className='flex-row gap-3 flex-wrap'>
 						<TouchableOpacity
 							onPress={() => router.push('/(coach)/schedule')}
-							className='flex-1 min-w-[45%] bg-bg-primary rounded-xl p-4 items-center'
+							className='flex-1 min-w-[45%] bg-bg-primary rounded-xl p-4 items-center border border-[#F9C513]/20'
 						>
 							<Ionicons name='calendar' size={32} color='#F9C513' />
 							<Text className='text-text-primary font-semibold mt-2'>
@@ -186,7 +394,7 @@ const CoachDashboard = () => {
 						</TouchableOpacity>
 						<TouchableOpacity
 							onPress={() => router.push('/(coach)/progress')}
-							className='flex-1 min-w-[45%] bg-bg-primary rounded-xl p-4 items-center'
+							className='flex-1 min-w-[45%] bg-bg-primary rounded-xl p-4 items-center border border-[#F9C513]/20'
 						>
 							<Ionicons name='trending-up' size={32} color='#F9C513' />
 							<Text className='text-text-primary font-semibold mt-2'>

@@ -23,6 +23,7 @@ export const LOGIN_MUTATION = gql`
 					fitnessGoal
 					workOutTime
 					coachesIds
+					hasEnteredDetails
 				}
 				coachDetails {
 					clientsIds
@@ -65,6 +66,7 @@ export const CREATE_USER_MUTATION = gql`
 					fitnessGoal
 					workOutTime
 					coachesIds
+					hasEnteredDetails
 				}
 				coachDetails {
 					clientsIds
@@ -262,6 +264,7 @@ export const UPDATE_USER_MUTATION = gql`
 				fitnessGoal
 				workOutTime
 				coachesIds
+				hasEnteredDetails
 			}
 			coachDetails {
 				clientsIds

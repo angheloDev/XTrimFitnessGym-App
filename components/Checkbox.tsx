@@ -14,6 +14,7 @@ interface CheckboxProps {
 	onChange: (checked: boolean) => void;
 	error?: string;
 	containerStyle?: ViewStyle;
+	disabled?: boolean;
 }
 
 const Checkbox: React.FC<CheckboxProps> = ({
@@ -22,12 +23,14 @@ const Checkbox: React.FC<CheckboxProps> = ({
 	onChange,
 	error,
 	containerStyle,
+	disabled = false,
 }) => {
 	return (
 		<View style={[styles.container, containerStyle]}>
 			<TouchableOpacity
-				onPress={() => onChange(!checked)}
-				style={styles.touchable}
+				onPress={() => !disabled && onChange(!checked)}
+				style={[styles.touchable, disabled && styles.disabled]}
+				disabled={disabled}
 			>
 				{checked ? (
 					<LinearGradient
@@ -90,6 +93,9 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		marginTop: 4,
 		marginLeft: 36,
+	},
+	disabled: {
+		opacity: 0.5,
 	},
 });
 
