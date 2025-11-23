@@ -5,7 +5,14 @@ import Select from '@/components/Select';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+	KeyboardAvoidingView,
+	Platform,
+	ScrollView,
+	Text,
+	TouchableOpacity,
+	View,
+} from 'react-native';
 
 const fitnessGoalOptions = [
 	{ label: 'Weight loss', value: 'Weight loss' },
@@ -85,10 +92,15 @@ const Second = () => {
 
 	return (
 		<FixedView className='flex-1 bg-bg-darker'>
-			<ScrollView
-				contentContainerClassName='flex-grow px-5 py-8'
-				keyboardShouldPersistTaps='handled'
+			<KeyboardAvoidingView
+				behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+				className='flex-1'
+				keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
 			>
+				<ScrollView
+					contentContainerClassName='flex-grow px-5 py-8'
+					keyboardShouldPersistTaps='handled'
+				>
 				<Text className='text-3xl font-bold mb-2 text-text-primary'>
 					Fitness Goals
 				</Text>
@@ -195,6 +207,7 @@ const Second = () => {
 					</View>
 				</View>
 			</ScrollView>
+			</KeyboardAvoidingView>
 		</FixedView>
 	);
 };

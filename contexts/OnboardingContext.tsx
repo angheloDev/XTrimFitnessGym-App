@@ -19,8 +19,6 @@ export interface OnboardingData {
 
 	// Screen 4
 	agreedToTermsAndConditions?: boolean;
-	agreedToPrivacyPolicy?: boolean;
-	agreedToLiabilityWaiver?: boolean;
 }
 
 interface OnboardingContextType {

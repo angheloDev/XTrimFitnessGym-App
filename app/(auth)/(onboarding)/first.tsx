@@ -6,7 +6,13 @@ import Select from '@/components/Select';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import {
+	KeyboardAvoidingView,
+	Platform,
+	ScrollView,
+	Text,
+	View,
+} from 'react-native';
 
 const genderOptions = [
 	{ label: 'Male', value: 'Male' },
@@ -77,10 +83,15 @@ const First = () => {
 
 	return (
 		<FixedView className='flex-1 bg-bg-darker'>
-			<ScrollView
-				contentContainerClassName='flex-grow px-5 py-8'
-				keyboardShouldPersistTaps='handled'
+			<KeyboardAvoidingView
+				behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+				className='flex-1'
+				keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
 			>
+				<ScrollView
+					contentContainerClassName='flex-grow px-5 py-8'
+					keyboardShouldPersistTaps='handled'
+				>
 				<Text className='text-3xl font-bold mb-2 text-text-primary'>
 					Personal Information
 				</Text>
@@ -151,11 +162,11 @@ const First = () => {
 
 					<View className='flex-row gap-3 mt-4'>
 						<GradientButton
-							onPress={() => router.push('/(auth)/login')}
+							onPress={() => router.back()}
 							className='flex-1'
 							variant='secondary'
 						>
-							Back to Login
+							Back
 						</GradientButton>
 						<GradientButton onPress={handleContinue} className='flex-1'>
 							Continue
@@ -163,6 +174,7 @@ const First = () => {
 					</View>
 				</View>
 			</ScrollView>
+			</KeyboardAvoidingView>
 		</FixedView>
 	);
 };

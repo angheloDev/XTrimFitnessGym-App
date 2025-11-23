@@ -4,7 +4,13 @@ import Input from '@/components/Input';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Text, View, ScrollView } from 'react-native';
+import {
+	KeyboardAvoidingView,
+	Platform,
+	ScrollView,
+	Text,
+	View,
+} from 'react-native';
 
 const Third = () => {
 	const router = useRouter();
@@ -53,10 +59,15 @@ const Third = () => {
 
 	return (
 		<FixedView className='flex-1 bg-bg-darker'>
-			<ScrollView
-				contentContainerClassName='flex-grow px-5 py-8'
-				keyboardShouldPersistTaps='handled'
+			<KeyboardAvoidingView
+				behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+				className='flex-1'
+				keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
 			>
+				<ScrollView
+					contentContainerClassName='flex-grow px-5 py-8'
+					keyboardShouldPersistTaps='handled'
+				>
 				<Text className='text-3xl font-bold mb-2 text-text-primary'>
 					Account Details
 				</Text>
@@ -121,6 +132,7 @@ const Third = () => {
 					</View>
 				</View>
 			</ScrollView>
+			</KeyboardAvoidingView>
 		</FixedView>
 	);
 };

@@ -14,7 +14,15 @@ import { useMutation } from '@apollo/client/react';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+	Alert,
+	KeyboardAvoidingView,
+	Platform,
+	ScrollView,
+	Text,
+	TouchableOpacity,
+	View,
+} from 'react-native';
 
 const Login = () => {
 	const router = useRouter();
@@ -116,70 +124,74 @@ const Login = () => {
 
 	return (
 		<FixedView className='flex-1 bg-bg-darker'>
-			<ScrollView
-				contentContainerClassName='flex-grow justify-center px-5 py-8'
-				keyboardShouldPersistTaps='handled'
+			<KeyboardAvoidingView
+				behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+				className='flex-1'
+				keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
 			>
-				<View className='items-center mb-6'>
-					<Image
-						source={require('@/assets/logos/XTFG_logo.PNG')}
-						style={{ width: 200, height: 100 }}
-						contentFit='contain'
-					/>
-				</View>
-				<Text className='text-lg text-text-secondary mb-10 text-center'>
-					Sign in to your account
-				</Text>
-
-				<View className='gap-4'>
-					<Input
-						label='Email'
-						placeholder='Enter your email'
-						value={email}
-						onChangeText={(text) => {
-							setEmail(text);
-							setEmailError('');
-						}}
-						keyboardType='email-address'
-						autoCapitalize='none'
-						autoComplete='email'
-						error={emailError}
-					/>
-
-					<Input
-						label='Password'
-						placeholder='Enter your password'
-						value={password}
-						onChangeText={(text) => {
-							setPassword(text);
-							setPasswordError('');
-						}}
-						secureTextEntry
-						autoCapitalize='none'
-						autoComplete='password'
-						error={passwordError}
-					/>
-
-					<GradientButton
-						onPress={handleLogin}
-						loading={loading}
-						className='mt-2.5'
-					>
-						{loading ? 'Logging in...' : 'Log in'}
-					</GradientButton>
-
-					<View className='mt-6 flex-row justify-center items-center'>
-						<Text className='text-text-secondary mr-2'>
-							Don&apos;t have an account yet?
-						</Text>
-						<TouchableOpacity
-							onPress={() => router.push('/(auth)/(onboarding)/first')}
-						>
-							<Text className='text-[#F9C513] font-semibold'>Sign up</Text>
-						</TouchableOpacity>
+				<ScrollView
+					contentContainerClassName='flex-grow justify-center px-5 py-8'
+					keyboardShouldPersistTaps='handled'
+				>
+					<View className='items-center mb-6'>
+						<Image
+							source={require('@/assets/logos/XTFG_logo.PNG')}
+							style={{ width: 200, height: 100 }}
+							contentFit='contain'
+						/>
 					</View>
-				</View>
-			</ScrollView>
+					<Text className='text-lg text-text-secondary mb-10 text-center'>
+						Sign in to your account
+					</Text>
+
+					<View className='gap-4'>
+						<Input
+							label='Email'
+							placeholder='Enter your email'
+							value={email}
+							onChangeText={(text) => {
+								setEmail(text);
+								setEmailError('');
+							}}
+							keyboardType='email-address'
+							autoCapitalize='none'
+							autoComplete='email'
+							error={emailError}
+						/>
+
+						<Input
+							label='Password'
+							placeholder='Enter your password'
+							value={password}
+							onChangeText={(text) => {
+								setPassword(text);
+								setPasswordError('');
+							}}
+							secureTextEntry
+							autoCapitalize='none'
+							autoComplete='password'
+							error={passwordError}
+						/>
+
+						<GradientButton
+							onPress={handleLogin}
+							loading={loading}
+							className='mt-2.5'
+						>
+							{loading ? 'Logging in...' : 'Log in'}
+						</GradientButton>
+
+						<View className='mt-6 flex-row justify-center items-center'>
+							<Text className='text-text-secondary mr-2'>
+								Don&apos;t have an account yet?
+							</Text>
+							<TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
+								<Text className='text-[#F9C513] font-semibold'>Sign up</Text>
+							</TouchableOpacity>
+						</View>
+					</View>
+				</ScrollView>
+			</KeyboardAvoidingView>
 		</FixedView>
 	);
 };

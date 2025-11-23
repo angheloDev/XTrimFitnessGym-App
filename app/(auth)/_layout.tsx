@@ -1,7 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { useAppSelector } from '@/store/hooks';
 import { Redirect, Stack } from 'expo-router';
 import React from 'react';
-import { useAppSelector } from '@/store/hooks';
 
 const AuthLayout = () => {
 	const { isAuthenticated } = useAuth();
@@ -23,7 +23,8 @@ const AuthLayout = () => {
 				headerShown: false,
 			}}
 		>
-			<Stack.Screen name='login' />
+			<Stack.Screen name='login' options={{ animation: 'slide_from_left' }} />
+			<Stack.Screen name='signup' options={{ animation: 'slide_from_right' }} />
 			<Stack.Screen name='(onboarding)' options={{ headerShown: false }} />
 		</Stack>
 	);

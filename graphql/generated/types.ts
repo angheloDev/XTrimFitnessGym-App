@@ -99,6 +99,7 @@ export type CreateUserInput = {
   gender?: InputMaybe<Scalars['String']['input']>;
   heardFrom?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
   lastName: Scalars['String']['input'];
+  middleName?: InputMaybe<Scalars['String']['input']>;
   membershipDetails?: InputMaybe<MemberDetailsInput>;
   password: Scalars['String']['input'];
   phoneNumber?: InputMaybe<Scalars['String']['input']>;
@@ -483,6 +484,7 @@ export type User = {
   heardFrom?: Maybe<Array<Maybe<Scalars['String']['output']>>>;
   id: Scalars['ID']['output'];
   lastName: Scalars['String']['output'];
+  middleName?: Maybe<Scalars['String']['output']>;
   membershipDetails?: Maybe<MemberDetails>;
   phoneNumber?: Maybe<Scalars['String']['output']>;
   role: RoleType;

@@ -6,6 +6,7 @@ export const LOGIN_MUTATION = gql`
 			user {
 				id
 				firstName
+				middleName
 				lastName
 				email
 				role
@@ -47,6 +48,7 @@ export const CREATE_USER_MUTATION = gql`
 			user {
 				id
 				firstName
+				middleName
 				lastName
 				email
 				role
@@ -243,6 +245,7 @@ export const UPDATE_USER_MUTATION = gql`
 		updateUser(id: $id, input: $input) {
 			id
 			firstName
+			middleName
 			lastName
 			email
 			role
