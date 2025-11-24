@@ -3,15 +3,16 @@ import type { CodegenConfig } from '@graphql-codegen/cli';
 // Get API URL from environment variable or use default
 // You can set API_URL environment variable or it will use localhost
 // For production/CI, you might want to use: API_URL=http://your-api-url/graphql npm run generate
-const apiUrl = process.env.API_URL || 'http://localhost:8080/graphql';
+const apiUrl = process.env.API_URL ?? 'http://localhost:8080/graphql';
+// const apiUrl = process.env.API_URL || 'http://localhost:8080/graphql';
 
 const config: CodegenConfig = {
 	// Schema source: Fetch from running API server via introspection
-	// 
+	//
 	// Option 1: Use introspection (requires API server to be running)
 	// This is the default - make sure your API server is running before generating types
 	schema: apiUrl,
-	
+
 	// Option 2: Use schema files from API repository (uncomment to use)
 	// Make sure the API repo is in a sibling directory: ../XTrimFitGym-Api
 	// schema: '../XTrimFitGym-Api/src/graphql/**/*.graphql',
@@ -52,4 +53,3 @@ const config: CodegenConfig = {
 };
 
 export default config;
-

@@ -9,7 +9,21 @@
 		"userInterfaceStyle": "automatic",
 		"newArchEnabled": true,
 		"ios": {
-			"supportsTablet": true
+			"supportsTablet": true,
+			"infoPlist": {
+				"NSAppTransportSecurity": {
+					"NSAllowsArbitraryLoads": true,
+					"NSExceptionDomains": {
+						"localhost": {
+							"NSExceptionAllowsInsecureHTTPLoads": true
+						}
+						// "192.168.0.106": {
+						// 	"NSExceptionAllowsInsecureHTTPLoads": true,
+						// 	"NSIncludesSubdomains": true
+						// }
+					}
+				}
+			}
 		},
 		"android": {
 			"adaptiveIcon": {
@@ -19,7 +33,8 @@
 				"monochromeImage": "./assets/logos/XTFG_logo.PNG"
 			},
 			"edgeToEdgeEnabled": true,
-			"predictiveBackGestureEnabled": false
+			"predictiveBackGestureEnabled": false,
+			"usesCleartextTraffic": true
 		},
 		"web": {
 			"output": "static",
@@ -41,12 +56,12 @@
 				}
 			]
 		],
-	"experiments": {
-		"typedRoutes": true,
-		"reactCompiler": true
-	},
-	"extra": {
-		"apiUrl": "http://192.168.1.71:8080/graphql"
-	}
+		"experiments": {
+			"typedRoutes": true,
+			"reactCompiler": true
+		},
+		"extra": {
+			"apiUrl": "http://192.168.1.71:8080/graphql"
+		}
 	}
 }
