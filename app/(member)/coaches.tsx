@@ -12,10 +12,10 @@ import {
 	CREATE_COACH_REQUEST_MUTATION,
 } from '@/graphql/mutations';
 import { GET_CLIENT_REQUESTS_QUERY, GET_USERS_QUERY } from '@/graphql/queries';
+import { formatTimeRangeTo12Hour } from '@/utils/time-utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { formatTimeRangeTo12Hour } from '@/utils/time-utils';
 import React, { useMemo, useState } from 'react';
 import {
 	Alert,
