@@ -2,60 +2,76 @@ import FixedView from '@/components/FixedView';
 import TabHeader from '@/components/TabHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-	GET_UPCOMING_SESSIONS_QUERY,
-	GET_GOALS_QUERY,
+	GetClientSessionsQuery,
+	GetCurrentMembershipQuery,
+	GetGoalsQuery,
+	GetUpcomingSessionsQuery,
+} from '@/graphql/generated/types';
+import {
 	GET_CLIENT_SESSIONS_QUERY,
 	GET_CURRENT_MEMBERSHIP_QUERY,
+	GET_GOALS_QUERY,
+	GET_UPCOMING_SESSIONS_QUERY,
 } from '@/graphql/queries';
-import { useQuery } from '@apollo/client/react';
-import React, { useMemo } from 'react';
 import {
-	ScrollView,
-	Text,
-	View,
-	FlatList,
-	TouchableOpacity,
-} from 'react-native';
+	formatTimeRangeTo12Hour,
+	formatTimeTo12Hour,
+} from '@/utils/time-utils';
+import { useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import React, { useMemo } from 'react';
+import {
+	FlatList,
+	ScrollView,
+	Text,
+	TouchableOpacity,
+	View,
+} from 'react-native';
 
 const MemberDashboard = () => {
-	const { user, logout } = useAuth();
+	const { user } = useAuth();
 	const router = useRouter();
 
-	const { data: sessionsData, loading } = useQuery(
+	const { data: sessionsData, loading } = useQuery<GetUpcomingSessionsQuery>(
 		GET_UPCOMING_SESSIONS_QUERY,
 		{
 			fetchPolicy: 'cache-and-network',
 		}
 	);
 
-	const { data: goalsData } = useQuery(GET_GOALS_QUERY, {
+	const { data: goalsData } = useQuery<GetGoalsQuery>(GET_GOALS_QUERY, {
 		variables: { clientId: user?.id || '', status: 'active' },
 		skip: !user?.id,
 		fetchPolicy: 'cache-and-network',
 	});
 
-	const { data: allSessionsData } = useQuery(GET_CLIENT_SESSIONS_QUERY, {
-		variables: { clientId: user?.id || '' },
-		skip: !user?.id,
-		fetchPolicy: 'cache-and-network',
-	});
+	const { data: allSessionsData } = useQuery<GetClientSessionsQuery>(
+		GET_CLIENT_SESSIONS_QUERY,
+		{
+			variables: { clientId: user?.id || '' },
+			skip: !user?.id,
+			fetchPolicy: 'cache-and-network',
+		}
+	);
 
-	const { data: membershipData } = useQuery(GET_CURRENT_MEMBERSHIP_QUERY, {
-		fetchPolicy: 'cache-and-network',
-	});
+	const { data: membershipData } = useQuery<GetCurrentMembershipQuery>(
+		GET_CURRENT_MEMBERSHIP_QUERY,
+		{
+			fetchPolicy: 'cache-and-network',
+		}
+	);
 
 	const sessions = sessionsData?.getUpcomingSessions || [];
 	const activeGoals = goalsData?.getGoals || [];
-	const allSessions = allSessionsData?.getClientSessions || [];
 	const currentMembership = membershipData?.getCurrentMembership;
 
 	// Calculate completed sessions this month
 	const completedThisMonth = useMemo(() => {
+		const allSessionsList = allSessionsData?.getClientSessions || [];
 		const now = new Date();
 		const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-		return allSessions.filter((s: any) => {
+		return allSessionsList.filter((s: any) => {
 			const sessionDate = new Date(s.date);
 			return (
 				sessionDate >= startOfMonth &&
@@ -63,23 +79,11 @@ const MemberDashboard = () => {
 				s.status === 'completed'
 			);
 		}).length;
-	}, [allSessions]);
+	}, [allSessionsData]);
 
 	// Parse workout time
 	const workoutTime = useMemo(() => {
-		const timeStr = user?.membershipDetails?.workOutTime?.[0];
-		if (timeStr && timeStr.includes('-') && !timeStr.includes(' ')) {
-			const [start, end] = timeStr.split('-');
-			const startHour = parseInt(start);
-			const endHour = parseInt(end);
-			const formatHour = (hour: number) => {
-				const period = hour >= 12 ? 'PM' : 'AM';
-				const displayHour = hour % 12 || 12;
-				return `${displayHour}:00 ${period}`;
-			};
-			return `${formatHour(startHour)} - ${formatHour(endHour)}`;
-		}
-		return 'Not set';
+		return formatTimeRangeTo12Hour(user?.membershipDetails?.workOutTime?.[0]);
 	}, [user?.membershipDetails?.workOutTime]);
 
 	const formatDate = (dateString: string) => {
@@ -202,18 +206,21 @@ const MemberDashboard = () => {
 							)}
 
 						<View className='flex-row items-center justify-between'>
-							<View className='flex-row items-center flex-1'>
+							<View className='flex-row items-center flex-1 mr-2'>
 								<Ionicons
 									name='time'
 									size={18}
 									color='#8E8E93'
 									style={{ marginRight: 8 }}
 								/>
-								<Text className='text-text-secondary text-sm'>
+								<Text className='text-text-secondary text-sm flex-shrink'>
 									Preferred Workout Time
 								</Text>
 							</View>
-							<Text className='text-text-primary font-semibold'>
+							<Text
+								className='text-text-primary font-semibold flex-shrink-0'
+								numberOfLines={1}
+							>
 								{workoutTime}
 							</Text>
 						</View>
@@ -285,19 +292,19 @@ const MemberDashboard = () => {
 							</View>
 							<View
 								className={`px-3 py-1 rounded-full ${
-									currentMembership.status === 'active'
+									currentMembership.status === 'ACTIVE'
 										? 'bg-green-500/20 border border-green-500/30'
 										: 'bg-red-500/20 border border-red-500/30'
 								}`}
 							>
 								<Text
 									className={`text-xs font-semibold ${
-										currentMembership.status === 'active'
+										currentMembership.status === 'ACTIVE'
 											? 'text-green-400'
 											: 'text-red-400'
 									}`}
 								>
-									{currentMembership.status.toUpperCase()}
+									{currentMembership.status}
 								</Text>
 							</View>
 						</View>
@@ -324,9 +331,7 @@ const MemberDashboard = () => {
 								Upcoming Sessions
 							</Text>
 						</View>
-						<TouchableOpacity
-							onPress={() => router.push('/(member)/schedule')}
-						>
+						<TouchableOpacity onPress={() => router.push('/(member)/schedule')}>
 							<Text className='text-[#F9C513] font-semibold'>View All</Text>
 						</TouchableOpacity>
 					</View>
@@ -337,11 +342,7 @@ const MemberDashboard = () => {
 						</View>
 					) : sessions.length === 0 ? (
 						<View className='bg-bg-primary rounded-xl p-6 items-center border border-[#F9C513]/20'>
-							<Ionicons
-								name='calendar-outline'
-								size={48}
-								color='#8E8E93'
-							/>
+							<Ionicons name='calendar-outline' size={48} color='#8E8E93' />
 							<Text className='text-text-secondary mt-4 text-center'>
 								No upcoming sessions
 							</Text>
@@ -355,7 +356,7 @@ const MemberDashboard = () => {
 								<View className='bg-bg-primary rounded-xl p-4 mb-3 flex-row border border-[#F9C513]/20'>
 									<View className='bg-bg-darker rounded-lg p-3 mr-3 items-center justify-center min-w-[80] border border-[#F9C513]/10'>
 										<Text className='text-[#F9C513] font-bold text-lg'>
-											{item.startTime}
+											{formatTimeTo12Hour(item.startTime)}
 										</Text>
 										<Text className='text-text-secondary text-xs mt-1'>
 											{formatDate(item.date)}
@@ -366,21 +367,13 @@ const MemberDashboard = () => {
 											{item.name}
 										</Text>
 										<View className='flex-row items-center mb-1'>
-											<Ionicons
-												name='location'
-												size={14}
-												color='#8E8E93'
-											/>
+											<Ionicons name='location' size={14} color='#8E8E93' />
 											<Text className='text-text-secondary text-sm ml-1'>
 												{item.gymArea}
 											</Text>
 										</View>
 										<View className='flex-row items-center'>
-											<Ionicons
-												name='person'
-												size={14}
-												color='#8E8E93'
-											/>
+											<Ionicons name='person' size={14} color='#8E8E93' />
 											<Text className='text-text-secondary text-sm ml-1'>
 												With Coach {item.coach?.firstName || ''}{' '}
 												{item.coach?.lastName || ''}
@@ -403,11 +396,7 @@ const MemberDashboard = () => {
 							onPress={() => router.push('/(member)/progress')}
 							className='flex-1 bg-bg-primary rounded-xl p-4 items-center border border-[#F9C513]/20'
 						>
-							<Ionicons
-								name='trending-up'
-								size={32}
-								color='#F9C513'
-							/>
+							<Ionicons name='trending-up' size={32} color='#F9C513' />
 							<Text className='text-text-primary font-semibold mt-2'>
 								Progress
 							</Text>

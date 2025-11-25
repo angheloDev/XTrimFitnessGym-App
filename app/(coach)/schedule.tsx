@@ -16,6 +16,7 @@ import {
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
+import { formatTimeTo12Hour } from '@/utils/time-utils';
 import {
 	Alert,
 	FlatList,
@@ -176,7 +177,7 @@ const CoachSchedule = () => {
 								<View className='bg-bg-primary rounded-xl p-4 mb-3 flex-row'>
 									<View className='bg-bg-darker rounded-lg p-3 mr-3 items-center justify-center min-w-[80]'>
 										<Text className='text-[#F9C513] font-bold text-lg'>
-											{item.startTime}
+											{formatTimeTo12Hour(item.startTime)}
 										</Text>
 										<Text className='text-text-secondary text-xs mt-1'>
 											{formatDate(item.date)}

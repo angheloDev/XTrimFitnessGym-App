@@ -137,7 +137,7 @@ const MemberSchedule = () => {
 								<View className='flex-row'>
 									<View className='bg-bg-darker rounded-lg p-3 mr-3 items-center justify-center min-w-[80]'>
 										<Text className='text-[#F9C513] font-bold text-lg'>
-											{item.startTime}
+											{formatTimeTo12Hour(item.startTime)}
 										</Text>
 										<Text className='text-text-secondary text-xs mt-1'>
 											{formatDate(item.date)}

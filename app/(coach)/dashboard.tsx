@@ -6,6 +6,7 @@ import {
 	GET_PENDING_COACH_REQUESTS_QUERY,
 	GET_USERS_QUERY,
 } from '@/graphql/queries';
+import { formatTimeTo12Hour } from '@/utils/time-utils';
 import { useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -229,7 +230,7 @@ const CoachDashboard = () => {
 									{clientCapacity.limit > 0 && ` / ${clientCapacity.limit}`}
 								</Text>
 								{clientCapacity.limit > 0 && (
-									<View className='w-16 bg-bg-darker rounded-full h-2 ml-2'>
+									<View className='w-fit bg-bg-darker rounded-full h-2'>
 										<View
 											className={`h-2 rounded-full ${
 												clientCapacity.percentage >= 90
@@ -347,7 +348,7 @@ const CoachDashboard = () => {
 								<View className='bg-bg-primary rounded-xl p-4 mb-3 flex-row border border-[#F9C513]/20'>
 									<View className='bg-bg-darker rounded-lg p-3 mr-3 items-center justify-center min-w-[80] border border-[#F9C513]/10'>
 										<Text className='text-[#F9C513] font-bold text-lg'>
-											{item.startTime}
+											{formatTimeTo12Hour(item.startTime)}
 										</Text>
 										<Text className='text-text-secondary text-xs mt-1'>
 											{formatDate(item.date)}

@@ -10,6 +10,7 @@ import { UPDATE_USER_MUTATION } from '@/graphql/mutations';
 import { useAppDispatch } from '@/store/hooks';
 import { setUser } from '@/store/slices/userSlice';
 import { convertGraphQLUser } from '@/utils/graphql-utils';
+import { formatTimeRangeTo12Hour } from '@/utils/time-utils';
 import { useMutation } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
@@ -811,6 +812,19 @@ const CoachProfile = () => {
 										</Text>
 									</View>
 								)}
+								{user.coachDetails.teachingTime &&
+									user.coachDetails.teachingTime.length > 0 && (
+										<View className='mb-4'>
+											<Text className='text-text-secondary text-sm mb-1'>
+												Teaching Time
+											</Text>
+											<Text className='text-text-primary font-medium'>
+												{formatTimeRangeTo12Hour(
+													user.coachDetails.teachingTime[0]
+												)}
+											</Text>
+										</View>
+									)}
 								{user.coachDetails.ratings && (
 									<View>
 										<Text className='text-text-secondary text-sm mb-1'>

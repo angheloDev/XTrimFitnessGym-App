@@ -10,6 +10,7 @@ import { UPDATE_USER_MUTATION } from '@/graphql/mutations';
 import { useAppDispatch } from '@/store/hooks';
 import { setUser } from '@/store/slices/userSlice';
 import { convertGraphQLUser } from '@/utils/graphql-utils';
+import { formatTimeRangeTo12Hour } from '@/utils/time-utils';
 import { useMutation } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
@@ -27,6 +28,17 @@ const physiqueGoalTypeOptions = [
 		value: 'Mesomorph',
 	},
 	{ label: 'Endomorph (bulky build, gains weight easily)', value: 'Endomorph' },
+];
+
+const fitnessGoalOptions = [
+	{ label: 'Weight loss', value: 'Weight loss' },
+	{ label: 'Muscle building', value: 'Muscle building' },
+	{ label: 'General fitness', value: 'General fitness' },
+	{ label: 'Strength training', value: 'Strength training' },
+	{ label: 'Endurance', value: 'Endurance' },
+	{ label: 'Flexibility', value: 'Flexibility' },
+	{ label: 'Athletic Performance', value: 'Athletic Performance' },
+	{ label: 'Rehabilitation', value: 'Rehabilitation' },
 ];
 
 const MemberProfile = () => {
@@ -75,6 +87,9 @@ const MemberProfile = () => {
 	);
 	const [physiqueGoalType, setPhysiqueGoalType] = useState(
 		user?.membershipDetails?.physiqueGoalType || ''
+	);
+	const [fitnessGoal, setFitnessGoal] = useState<string[]>(
+		user?.membershipDetails?.fitnessGoal || []
 	);
 
 	// Credentials section
@@ -133,6 +148,10 @@ const MemberProfile = () => {
 			newErrors.physiqueGoalType = 'Physique goal type is required';
 		}
 
+		if (fitnessGoal.length === 0) {
+			newErrors.fitnessGoal = 'Please select at least one fitness goal';
+		}
+
 		if (!workOutTimeStart || !workOutTimeEnd) {
 			newErrors.workOutTime = 'Workout time range is required';
 		} else {
@@ -183,7 +202,7 @@ const MemberProfile = () => {
 				workOutTimeStart && workOutTimeEnd
 					? [`${workOutTimeStart.getHours()}-${workOutTimeEnd.getHours()}`]
 					: user?.membershipDetails?.workOutTime || [],
-			fitnessGoal: user?.membershipDetails?.fitnessGoal || [],
+			fitnessGoal: fitnessGoal,
 			hasEnteredDetails: user?.membershipDetails?.hasEnteredDetails ?? true, // Preserve onboarding status
 		};
 
@@ -248,6 +267,7 @@ const MemberProfile = () => {
 		setWorkOutTimeStart(workoutTime.start);
 		setWorkOutTimeEnd(workoutTime.end);
 		setPhysiqueGoalType(user?.membershipDetails?.physiqueGoalType || '');
+		setFitnessGoal(user?.membershipDetails?.fitnessGoal || []);
 		setErrors({});
 		setIsEditing(false);
 	};
@@ -375,6 +395,62 @@ const MemberProfile = () => {
 							error={errors.physiqueGoalType}
 						/>
 
+						<View className='mb-4'>
+							<Text className='text-text-primary text-sm font-medium mb-2'>
+								Fitness Goals (Select all that apply) *
+							</Text>
+							<View className='flex-row flex-wrap gap-2'>
+								{fitnessGoalOptions.map((option) => {
+									const isSelected = fitnessGoal.includes(option.value);
+									return (
+										<TouchableOpacity
+											key={option.value}
+											onPress={() => {
+												if (isSelected) {
+													setFitnessGoal(
+														fitnessGoal.filter((g) => g !== option.value)
+													);
+												} else {
+													setFitnessGoal([...fitnessGoal, option.value]);
+												}
+												setErrors({ ...errors, fitnessGoal: '' });
+											}}
+											className={`px-4 py-2 rounded-lg border-2 ${
+												isSelected
+													? 'bg-[#F9C513]/20 border-[#F9C513]'
+													: 'bg-bg-darker border-bg-primary'
+											}`}
+										>
+											<View className='flex-row items-center'>
+												{isSelected && (
+													<Ionicons
+														name='checkmark-circle'
+														size={18}
+														color='#F9C513'
+														style={{ marginRight: 6 }}
+													/>
+												)}
+												<Text
+													className={`font-medium ${
+														isSelected
+															? 'text-[#F9C513]'
+															: 'text-text-secondary'
+													}`}
+												>
+													{option.label}
+												</Text>
+											</View>
+										</TouchableOpacity>
+									);
+								})}
+							</View>
+							{errors.fitnessGoal && (
+								<Text className='text-red-500 text-sm mt-1'>
+									{errors.fitnessGoal}
+								</Text>
+							)}
+						</View>
+
 						<View>
 							<Text className='text-text-primary text-sm font-medium mb-2'>
 								Preferred Workout Time
@@ -465,7 +541,7 @@ const MemberProfile = () => {
 											Preferred Workout Time
 										</Text>
 										<Text className='text-text-primary font-medium'>
-											{user.membershipDetails.workOutTime[0]}
+											{formatTimeRangeTo12Hour(user.membershipDetails.workOutTime[0])}
 										</Text>
 									</View>
 								)}

@@ -15,6 +15,7 @@ import { GET_CLIENT_REQUESTS_QUERY, GET_USERS_QUERY } from '@/graphql/queries';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { formatTimeRangeTo12Hour } from '@/utils/time-utils';
 import React, { useMemo, useState } from 'react';
 import {
 	Alert,
@@ -465,12 +466,15 @@ const MemberCoaches = () => {
 												{selectedCoach.coachDetails.teachingDate.join(', ')}
 											</Text>
 										)}
-										{selectedCoach.coachDetails?.teachingTime && (
-											<Text className='text-text-secondary'>
-												Times:{' '}
-												{selectedCoach.coachDetails.teachingTime.join(', ')}
-											</Text>
-										)}
+										{selectedCoach.coachDetails?.teachingTime &&
+											selectedCoach.coachDetails.teachingTime.length > 0 && (
+												<Text className='text-text-secondary'>
+													Times:{' '}
+													{selectedCoach.coachDetails.teachingTime
+														.map((time: any) => formatTimeRangeTo12Hour(time))
+														.join(', ')}
+												</Text>
+											)}
 									</View>
 
 									<View className='mb-6'>
