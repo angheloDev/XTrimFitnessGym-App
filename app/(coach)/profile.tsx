@@ -377,15 +377,18 @@ const CoachProfile = () => {
 				<View className='items-center mb-6'>
 					<View className='bg-[#F9C513] rounded-full w-24 h-24 items-center justify-center mb-4'>
 						<Text className='text-bg-darker font-bold text-3xl'>
-							{firstName.charAt(0) || user?.firstName?.charAt(0)}
-							{lastName.charAt(0) || user?.lastName?.charAt(0)}
+							{(firstName || user?.firstName || '').charAt(0)}
+							{(lastName || user?.lastName || '').charAt(0)}
 						</Text>
 					</View>
 					<Text className='text-2xl font-bold text-text-primary'>
-						Coach {firstName || user?.firstName} {lastName || user?.lastName}
+						Coach{' '}
+						{(firstName || user?.firstName || '') +
+							' ' +
+							(lastName || user?.lastName || '')}
 					</Text>
 					<Text className='text-text-secondary mt-1'>
-						{email || user?.email}
+						{email || user?.email || ''}
 					</Text>
 				</View>
 

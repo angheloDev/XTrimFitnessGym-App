@@ -64,10 +64,12 @@ const GradientButton: React.FC<GradientButtonProps> = ({
 				<View style={styles.secondaryContainer}>
 					{loading ? (
 						<ActivityIndicator size='small' color='#ffffff' />
-					) : (
+					) : typeof children === 'string' || typeof children === 'number' ? (
 						<Text style={styles.text} className={textClassName}>
 							{children}
 						</Text>
+					) : (
+						children
 					)}
 				</View>
 			)}
