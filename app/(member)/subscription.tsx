@@ -2,6 +2,10 @@ import FixedView from '@/components/FixedView';
 import GradientButton from '@/components/GradientButton';
 import TabHeader from '@/components/TabHeader';
 import { useAuth } from '@/contexts/AuthContext';
+import type {
+	GetCurrentMembershipQuery,
+	GetMembershipsQuery,
+} from '@/graphql/generated/types';
 import {
 	CANCEL_MEMBERSHIP_MUTATION,
 	PURCHASE_MEMBERSHIP_MUTATION,
@@ -36,7 +40,7 @@ const MemberSubscription = () => {
 		data: membershipsData,
 		loading: membershipsLoading,
 		refetch: refetchMemberships,
-	} = useQuery(GET_MEMBERSHIPS_QUERY, {
+	} = useQuery<GetMembershipsQuery>(GET_MEMBERSHIPS_QUERY, {
 		variables: { status: 'ACTIVE' },
 		fetchPolicy: 'cache-and-network',
 	});
@@ -46,7 +50,7 @@ const MemberSubscription = () => {
 		data: currentMembershipData,
 		loading: currentLoading,
 		refetch: refetchCurrent,
-	} = useQuery(GET_CURRENT_MEMBERSHIP_QUERY, {
+	} = useQuery<GetCurrentMembershipQuery>(GET_CURRENT_MEMBERSHIP_QUERY, {
 		fetchPolicy: 'cache-and-network',
 	});
 
@@ -376,7 +380,7 @@ const MemberSubscription = () => {
 								No Active Subscription
 							</Text>
 							<Text className='text-text-secondary text-center mb-4'>
-								You don't have an active membership subscription yet.
+								You don&apos;t have an active membership subscription yet.
 							</Text>
 							<Text className='text-text-secondary text-center'>
 								Choose a plan below to get started!
