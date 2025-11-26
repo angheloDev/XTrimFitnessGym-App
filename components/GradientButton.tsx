@@ -31,6 +31,8 @@ const GradientButton: React.FC<GradientButtonProps> = ({
 	// Gradient colors: red to yellow
 	const gradientColors = ['#E41E26', '#F9C513'];
 
+	const buttonHeight = typeof style === 'object' && style && 'height' in style ? style.height : undefined;
+
 	return (
 		<Pressable
 			{...pressableProps}
@@ -50,7 +52,7 @@ const GradientButton: React.FC<GradientButtonProps> = ({
 					colors={gradientColors as [ColorValue, ColorValue]}
 					start={{ x: 0, y: 0 }}
 					end={{ x: 1, y: 1 }}
-					style={styles.gradient}
+					style={[styles.gradient, buttonHeight && { height: buttonHeight }]}
 				>
 					{loading ? (
 						<ActivityIndicator size='small' color='#ffffff' />
@@ -61,7 +63,7 @@ const GradientButton: React.FC<GradientButtonProps> = ({
 					)}
 				</LinearGradient>
 			) : (
-				<View style={styles.secondaryContainer}>
+				<View style={[styles.secondaryContainer, buttonHeight && { height: buttonHeight }]}>
 					{loading ? (
 						<ActivityIndicator size='small' color='#ffffff' />
 					) : typeof children === 'string' || typeof children === 'number' ? (
@@ -86,14 +88,13 @@ const styles = StyleSheet.create({
 		opacity: 0.5,
 	},
 	gradient: {
-		paddingVertical: 16,
 		paddingHorizontal: 20,
 		borderRadius: 12,
 		alignItems: 'center',
 		justifyContent: 'center',
+		minHeight: 48,
 	},
 	secondaryContainer: {
-		paddingVertical: 16,
 		paddingHorizontal: 20,
 		borderRadius: 12,
 		alignItems: 'center',
@@ -101,6 +102,7 @@ const styles = StyleSheet.create({
 		backgroundColor: '#2C2C2E',
 		borderWidth: 1,
 		borderColor: '#3A3A3C',
+		minHeight: 48,
 	},
 	text: {
 		color: '#ffffff',

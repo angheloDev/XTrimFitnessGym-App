@@ -227,7 +227,7 @@ const CoachDashboard = () => {
 							<View className='flex-row items-center'>
 								<Text className='text-text-primary font-semibold mr-2'>
 									{clientCapacity.current}
-									{clientCapacity.limit > 0 && ` / ${clientCapacity.limit}`}
+									{clientCapacity.limit > 0 ? ` / ${clientCapacity.limit}` : ''}
 								</Text>
 								{clientCapacity.limit > 0 && (
 									<View className='w-fit bg-bg-darker rounded-full h-2'>

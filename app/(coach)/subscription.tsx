@@ -90,7 +90,7 @@ const CoachSubscription = () => {
 									Price Paid
 								</Text>
 								<Text className='text-text-primary font-semibold text-lg'>
-									${currentMembership.priceAtPurchase}
+									₱{currentMembership.priceAtPurchase?.toLocaleString() || '0'}
 								</Text>
 							</View>
 						</View>

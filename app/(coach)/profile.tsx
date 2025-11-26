@@ -383,10 +383,7 @@ const CoachProfile = () => {
 						</Text>
 					</View>
 					<Text className='text-2xl font-bold text-text-primary'>
-						Coach{' '}
-						{(firstName || user?.firstName || '') +
-							' ' +
-							(lastName || user?.lastName || '')}
+						{`Coach ${(firstName || user?.firstName || '')} ${(lastName || user?.lastName || '')}`.trim()}
 					</Text>
 					<Text className='text-text-secondary mt-1'>
 						{email || user?.email || ''}
@@ -798,7 +795,7 @@ const CoachProfile = () => {
 											Years of Experience
 										</Text>
 										<Text className='text-text-primary font-medium'>
-											{user.coachDetails.yearsOfExperience.toString()} years
+											{String(user.coachDetails.yearsOfExperience)} years
 										</Text>
 									</View>
 								)}
@@ -831,7 +828,7 @@ const CoachProfile = () => {
 											Rating
 										</Text>
 										<Text className='text-text-primary font-medium'>
-											{user.coachDetails.ratings.toFixed(1)} / 5.0
+											{String(user.coachDetails.ratings.toFixed(1))} / 5.0
 										</Text>
 									</View>
 								)}
