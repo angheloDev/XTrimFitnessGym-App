@@ -56,16 +56,16 @@ const CoachLayout = () => {
 					}}
 				/>
 				<Tabs.Screen
-					name='subscription'
+					name='clients'
 					options={{
-						title: 'Subscription',
+						title: 'Clients',
 						tabBarIcon: ({ color, size }) => (
-							<Ionicons name='card' size={size} color={color} />
+							<Ionicons name='people' size={size} color={color} />
 						),
 					}}
 				/>
 				<Tabs.Screen
-					name='clients'
+					name='subscription'
 					options={{
 						href: null,
 					}}

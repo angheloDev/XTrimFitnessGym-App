@@ -340,3 +340,26 @@ export const CANCEL_COACH_REQUEST_MUTATION = gql`
 	}
 `;
 
+// Subscription Request mutations
+export const CREATE_SUBSCRIPTION_REQUEST_MUTATION = gql`
+	mutation CreateSubscriptionRequest($input: CreateSubscriptionRequestInput!) {
+		createSubscriptionRequest(input: $input) {
+			id
+			memberId
+			membershipId
+			membership {
+				id
+				name
+				monthlyPrice
+				description
+				features
+				durationType
+			}
+			status
+			requestedAt
+			expiresAt
+			createdAt
+		}
+	}
+`;
+

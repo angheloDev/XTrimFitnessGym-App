@@ -236,11 +236,11 @@ const MemberCoaches = () => {
 	const renderCoachCard = ({ item }: { item: any }) => (
 		<TouchableOpacity
 			onPress={() => handleCoachPress(item)}
-			className='bg-bg-primary rounded-xl p-4 mb-3'
+			className='bg-bg-primary rounded-xl p-4 mb-3 border border-[#F9C513]/20'
 			disabled={item.isAtLimit}
 		>
 			<View className='flex-row'>
-				<View className='bg-[#F9C513] rounded-full w-16 h-16 items-center justify-center mr-4'>
+				<View className='bg-[#F9C513] rounded-full w-16 h-16 items-center justify-center mr-4 border-2 border-bg-darker/30'>
 					<Text className='text-bg-darker font-bold text-xl'>
 						{item.firstName.charAt(0)}
 						{item.lastName.charAt(0)}
@@ -252,7 +252,7 @@ const MemberCoaches = () => {
 							Coach {item.firstName} {item.lastName}
 						</Text>
 						{item.isAtLimit && (
-							<View className='bg-red-500/20 px-2 py-1 rounded'>
+							<View className='bg-red-500/20 px-2 py-1 rounded border border-red-500/40'>
 								<Text className='text-red-500 text-xs font-semibold'>Full</Text>
 							</View>
 						)}
@@ -264,7 +264,7 @@ const MemberCoaches = () => {
 								.map((spec: string, index: number) => (
 									<View
 										key={index}
-										className='bg-bg-darker px-2 py-1 rounded mr-2 mb-1'
+										className='bg-bg-darker px-2 py-1 rounded mr-2 mb-1 border border-[#F9C513]/30'
 									>
 										<Text className='text-text-secondary text-xs'>{spec}</Text>
 									</View>
@@ -315,12 +315,12 @@ const MemberCoaches = () => {
 						placeholder='Search coaches by name or specialization...'
 						value={searchQuery}
 						onChangeText={setSearchQuery}
-						className='bg-bg-primary'
+						className='bg-bg-primary border border-[#F9C513]/20'
 					/>
 				</View>
 
 				{loading ? (
-					<View className='items-center justify-center py-20'>
+					<View className='items-center justify-center py-20 bg-bg-primary rounded-xl border border-[#F9C513]/20'>
 						<Text className='text-text-secondary'>Loading coaches...</Text>
 					</View>
 				) : (
@@ -346,7 +346,7 @@ const MemberCoaches = () => {
 								All Coaches
 							</Text>
 							{filteredOther.length === 0 ? (
-								<View className='bg-bg-primary rounded-xl p-6 items-center'>
+								<View className='bg-bg-primary rounded-xl p-6 items-center border border-[#F9C513]/20'>
 									<Ionicons name='people-outline' size={48} color='#8E8E93' />
 									<Text className='text-text-secondary mt-4 text-center'>
 										No coaches found
@@ -376,9 +376,9 @@ const MemberCoaches = () => {
 				}}
 			>
 				<View className='flex-1 bg-bg-darker justify-end'>
-					<View className='bg-bg-primary rounded-t-3xl p-6 max-h-[90%]'>
+					<View className='bg-bg-primary rounded-t-3xl p-6 max-h-[90%] border-t-2 border-[#F9C513]/30'>
 						<ScrollView showsVerticalScrollIndicator={false}>
-							<View className='flex-row justify-between items-center mb-6'>
+							<View className='flex-row justify-between items-center mb-6 pb-4 border-b border-bg-darker/30'>
 								<Text className='text-2xl font-bold text-text-primary'>
 									Coach Profile
 								</Text>
@@ -387,6 +387,7 @@ const MemberCoaches = () => {
 										setShowProfileModal(false);
 										setSelectedCoach(null);
 									}}
+									className='p-2 rounded-full border border-bg-darker/30'
 								>
 									<Ionicons name='close' size={28} color='#8E8E93' />
 								</TouchableOpacity>
@@ -394,8 +395,8 @@ const MemberCoaches = () => {
 
 							{selectedCoach && (
 								<>
-									<View className='items-center mb-6'>
-										<View className='bg-[#F9C513] rounded-full w-24 h-24 items-center justify-center mb-4'>
+									<View className='items-center mb-6 pb-6 border-b border-bg-darker/30'>
+										<View className='bg-[#F9C513] rounded-full w-24 h-24 items-center justify-center mb-4 border-2 border-bg-darker/30'>
 											<Text className='text-bg-darker font-bold text-3xl'>
 												{selectedCoach.firstName.charAt(0)}
 												{selectedCoach.lastName.charAt(0)}
@@ -414,7 +415,7 @@ const MemberCoaches = () => {
 									</View>
 
 									{selectedCoach.coachDetails?.specialization && (
-										<View className='mb-6'>
+										<View className='mb-6 pb-6 border-b border-bg-darker/30'>
 											<Text className='text-text-primary font-semibold mb-3 text-lg'>
 												Specializations
 											</Text>
@@ -423,7 +424,7 @@ const MemberCoaches = () => {
 													(spec: string, index: number) => (
 														<View
 															key={index}
-															className='bg-bg-darker px-3 py-2 rounded-lg mr-2 mb-2'
+															className='bg-bg-darker px-3 py-2 rounded-lg mr-2 mb-2 border border-[#F9C513]/30'
 														>
 															<Text className='text-text-primary'>{spec}</Text>
 														</View>
@@ -434,7 +435,7 @@ const MemberCoaches = () => {
 									)}
 
 									{selectedCoach.coachDetails?.yearsOfExperience && (
-										<View className='mb-6'>
+										<View className='mb-6 pb-6 border-b border-bg-darker/30'>
 											<Text className='text-text-primary font-semibold mb-2 text-lg'>
 												Experience
 											</Text>
@@ -446,7 +447,7 @@ const MemberCoaches = () => {
 									)}
 
 									{selectedCoach.coachDetails?.moreDetails && (
-										<View className='mb-6'>
+										<View className='mb-6 pb-6 border-b border-bg-darker/30'>
 											<Text className='text-text-primary font-semibold mb-2 text-lg'>
 												About
 											</Text>
@@ -456,7 +457,7 @@ const MemberCoaches = () => {
 										</View>
 									)}
 
-									<View className='mb-6'>
+									<View className='mb-6 pb-6 border-b border-bg-darker/30'>
 										<Text className='text-text-primary font-semibold mb-2 text-lg'>
 											Availability
 										</Text>
@@ -477,7 +478,7 @@ const MemberCoaches = () => {
 											)}
 									</View>
 
-									<View className='mb-6'>
+									<View className='mb-6 pb-6 border-b border-bg-darker/30'>
 										<Text className='text-text-primary font-semibold mb-2 text-lg'>
 											Client Capacity
 										</Text>
@@ -521,7 +522,7 @@ const MemberCoaches = () => {
 												{user?.membershipDetails?.coachesIds?.includes(
 													selectedCoach.id
 												) ? (
-													<View className='bg-green-500/20 px-4 py-3 rounded-lg items-center'>
+													<View className='bg-green-500/20 px-4 py-3 rounded-lg items-center border border-green-500/40'>
 														<Ionicons
 															name='checkmark-circle'
 															size={24}
@@ -534,7 +535,7 @@ const MemberCoaches = () => {
 												) : pendingRequests.some(
 														(req: any) => req.coachId === selectedCoach.id
 												  ) ? (
-													<View className='bg-yellow-500/20 px-4 py-3 rounded-lg items-center'>
+													<View className='bg-yellow-500/20 px-4 py-3 rounded-lg items-center border border-yellow-500/40'>
 														<Ionicons
 															name='time-outline'
 															size={24}

@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 
 const CoachDashboard = () => {
-	const { user, logout } = useAuth();
+	const { user } = useAuth();
 	const router = useRouter();
 
 	const { data: sessionsData, loading: sessionsLoading } = useQuery(
@@ -32,19 +32,21 @@ const CoachDashboard = () => {
 		}
 	);
 
-	const { data: clientsData, loading: clientsLoading } = useQuery(
-		GET_USERS_QUERY,
-		{
-			variables: { role: 'member' },
-			fetchPolicy: 'cache-and-network',
-		}
-	);
+	const { data: clientsData } = useQuery(GET_USERS_QUERY, {
+		variables: { role: 'member' },
+		fetchPolicy: 'cache-and-network',
+	});
 
 	const { data: requestsData } = useQuery(GET_PENDING_COACH_REQUESTS_QUERY, {
 		fetchPolicy: 'cache-and-network',
 	});
 
-	const sessions = (sessionsData as any)?.getCoachSessions || [];
+	// Memoize sessions to prevent creating new array on every render
+	const sessions = useMemo(
+		() => (sessionsData as any)?.getCoachSessions || [],
+		[sessionsData]
+	);
+
 	// Filter to only show coach's own clients
 	const allClients = (clientsData as any)?.getUsers || [];
 	const clients = allClients.filter((client: any) =>

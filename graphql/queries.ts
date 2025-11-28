@@ -351,3 +351,29 @@ export const GET_CLIENT_REQUESTS_QUERY = gql`
 	}
 `;
 
+// Subscription Request queries
+export const GET_MY_SUBSCRIPTION_REQUESTS_QUERY = gql`
+	query GetMySubscriptionRequests {
+		getMySubscriptionRequests {
+			id
+			memberId
+			membershipId
+			membership {
+				id
+				name
+				monthlyPrice
+				description
+				features
+				durationType
+			}
+			status
+			requestedAt
+			expiresAt
+			approvedAt
+			rejectedAt
+			createdAt
+			updatedAt
+		}
+	}
+`;
+

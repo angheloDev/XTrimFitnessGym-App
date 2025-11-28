@@ -8,11 +8,12 @@ import type {
 } from '@/graphql/generated/types';
 import {
 	CANCEL_MEMBERSHIP_MUTATION,
-	PURCHASE_MEMBERSHIP_MUTATION,
+	CREATE_SUBSCRIPTION_REQUEST_MUTATION,
 } from '@/graphql/mutations';
 import {
 	GET_CURRENT_MEMBERSHIP_QUERY,
 	GET_MEMBERSHIPS_QUERY,
+	GET_MY_SUBSCRIPTION_REQUESTS_QUERY,
 } from '@/graphql/queries';
 import { useAppDispatch } from '@/store/hooks';
 import { updateUser } from '@/store/slices/userSlice';
@@ -54,26 +55,36 @@ const MemberSubscription = () => {
 		fetchPolicy: 'cache-and-network',
 	});
 
-	const [purchaseMembership, { loading: purchasing }] = useMutation(
-		PURCHASE_MEMBERSHIP_MUTATION,
+	// Fetch subscription requests
+	const {
+		data: requestsData,
+		loading: requestsLoading,
+		refetch: refetchRequests,
+	} = useQuery(GET_MY_SUBSCRIPTION_REQUESTS_QUERY, {
+		fetchPolicy: 'cache-and-network',
+		pollInterval: 3000, // Poll every 3 seconds to check for approval/expiration
+	});
+
+	const [createSubscriptionRequest, { loading: requesting }] = useMutation(
+		CREATE_SUBSCRIPTION_REQUEST_MUTATION,
 		{
-			onCompleted: (data) => {
+			onCompleted: () => {
 				setShowPurchaseModal(false);
 				setSelectedMembership(null);
-				refetchMemberships();
-				refetchCurrent();
-				// Update user in Redux with new membershipId
-				if (user && selectedMembership) {
-					dispatch(
-						updateUser({
-							membershipDetails: {
-								...user.membershipDetails,
-								membershipId: selectedMembership.id,
+				refetchRequests();
+				Alert.alert(
+					'Request Sent',
+					'Your subscription request has been sent to the admin. It will expire in 1 minute if not approved.',
+					[
+						{
+							text: 'OK',
+							onPress: () => {
+								// Poll for updates
+								refetchCurrent();
 							},
-						} as any)
-					);
-				}
-				Alert.alert('Success', 'Membership purchased successfully!');
+						},
+					]
+				);
 			},
 			onError: (error) => {
 				Alert.alert('Error', error.message);
@@ -97,6 +108,30 @@ const MemberSubscription = () => {
 
 	const memberships = membershipsData?.getMemberships || [];
 	const currentSubscription = currentMembershipData?.getCurrentMembership;
+	const subscriptionRequests = requestsData?.getMySubscriptionRequests || [];
+
+	// Get pending request for a specific membership
+	const getPendingRequest = (membershipId: string) => {
+		return subscriptionRequests.find(
+			(req: any) =>
+				req.membershipId === membershipId &&
+				(req.status === 'PENDING' || req.status === 'EXPIRED')
+		);
+	};
+
+	// Check if request is expired
+	const isRequestExpired = (expiresAt: string) => {
+		return new Date(expiresAt) < new Date();
+	};
+
+	// Get time remaining for pending request
+	const getTimeRemaining = (expiresAt: string) => {
+		const now = new Date();
+		const expires = new Date(expiresAt);
+		const diff = expires.getTime() - now.getTime();
+		if (diff <= 0) return 0;
+		return Math.ceil(diff / 1000); // seconds
+	};
 
 	const calculateDaysRemaining = (expiresAt: string) => {
 		const expiry = new Date(expiresAt);
@@ -111,10 +146,10 @@ const MemberSubscription = () => {
 		setShowPurchaseModal(true);
 	};
 
-	const confirmPurchase = () => {
+	const confirmRequest = () => {
 		if (!selectedMembership) return;
 
-		purchaseMembership({
+		createSubscriptionRequest({
 			variables: {
 				input: {
 					membershipId: selectedMembership.id,
@@ -122,6 +157,17 @@ const MemberSubscription = () => {
 			},
 		});
 	};
+
+	// Check if membership was just approved (request was approved and we now have a subscription)
+	React.useEffect(() => {
+		const approvedRequest = subscriptionRequests.find(
+			(req: any) => req.status === 'APPROVED' && req.approvedAt
+		);
+		if (approvedRequest && !currentSubscription) {
+			// Request was approved, refetch current membership
+			refetchCurrent();
+		}
+	}, [subscriptionRequests, currentSubscription, refetchCurrent]);
 
 	const handleCancelSubscription = () => {
 		if (!currentSubscription) return;
@@ -180,8 +226,8 @@ const MemberSubscription = () => {
 				{currentSubscription ? (
 					<>
 						{/* Current Subscription Card */}
-						<View className='bg-gradient-to-r from-[#E41E26] to-[#F9C513] rounded-xl p-6 mb-6'>
-							<View className='flex-row items-center justify-between mb-4'>
+						<View className='bg-gradient-to-r from-[#E41E26] to-[#F9C513] rounded-xl p-6 mb-6 border-2 border-white/20'>
+							<View className='flex-row items-center justify-between mb-4 pb-4 border-b border-white/20'>
 								<View className='flex-1'>
 									<Text className='text-white text-sm font-semibold mb-1'>
 										ACTIVE MEMBERSHIP
@@ -198,12 +244,12 @@ const MemberSubscription = () => {
 						</View>
 
 						{/* Subscription Details */}
-						<View className='bg-bg-primary rounded-xl p-5 mb-6'>
-							<Text className='text-xl font-semibold text-text-primary mb-4'>
+						<View className='bg-bg-primary rounded-xl p-5 mb-6 border border-[#F9C513]/20'>
+							<Text className='text-xl font-semibold text-text-primary mb-4 pb-4 border-b border-bg-darker/30'>
 								Subscription Details
 							</Text>
 
-							<View className='mb-4'>
+							<View className='mb-4 pb-4 border-b border-bg-darker/20'>
 								<View className='flex-row items-center mb-2'>
 									<Ionicons name='calendar-outline' size={20} color='#F9C513' />
 									<Text className='text-text-secondary text-sm ml-2'>
@@ -215,7 +261,7 @@ const MemberSubscription = () => {
 								</Text>
 							</View>
 
-							<View className='mb-4'>
+							<View className='mb-4 pb-4 border-b border-bg-darker/20'>
 								<View className='flex-row items-center mb-2'>
 									<Ionicons name='calendar-outline' size={20} color='#F9C513' />
 									<Text className='text-text-secondary text-sm ml-2'>
@@ -227,7 +273,7 @@ const MemberSubscription = () => {
 								</Text>
 							</View>
 
-							<View className='mb-4'>
+							<View className='mb-4 pb-4 border-b border-bg-darker/20'>
 								<Text className='text-text-secondary text-sm mb-2'>
 									Days Remaining
 								</Text>
@@ -236,7 +282,7 @@ const MemberSubscription = () => {
 								</Text>
 							</View>
 
-							<View className='mb-4'>
+							<View className='mb-4 pb-4 border-b border-bg-darker/20'>
 								<Text className='text-text-secondary text-sm mb-2'>
 									Price Paid
 								</Text>
@@ -247,15 +293,15 @@ const MemberSubscription = () => {
 
 							{currentSubscription.membership?.features &&
 								currentSubscription.membership.features.length > 0 && (
-									<View className='mt-4 pt-4 border-t border-bg-darker'>
-										<Text className='text-text-primary font-semibold mb-3'>
+									<View className='mt-4 pt-4 border-t border-bg-darker/30'>
+										<Text className='text-text-primary font-semibold mb-3 pb-3 border-b border-bg-darker/20'>
 											Included Features:
 										</Text>
 										{currentSubscription.membership.features.map(
 											(feature: string, index: number) => (
 												<View
 													key={index}
-													className='flex-row items-center mb-2'
+													className='flex-row items-center mb-2 pl-2 py-1 rounded border border-bg-darker/10'
 												>
 													<Ionicons
 														name='checkmark-circle'
@@ -296,7 +342,7 @@ const MemberSubscription = () => {
 						{/* Available Plans for Upgrade */}
 						{memberships.length > 0 && (
 							<View className='mb-6'>
-								<Text className='text-xl font-semibold text-text-primary mb-4'>
+								<Text className='text-xl font-semibold text-text-primary mb-4 pb-4 border-b border-[#F9C513]/20'>
 									Upgrade or Switch Plans
 								</Text>
 								<Text className='text-text-secondary mb-4'>
@@ -307,10 +353,10 @@ const MemberSubscription = () => {
 									.map((membership: any) => (
 										<View
 											key={membership.id}
-											className='bg-bg-primary rounded-xl p-5 mb-4 border border-bg-darker'
+											className='bg-bg-primary rounded-xl p-5 mb-4 border border-[#F9C513]/20'
 										>
 											{membership.name.includes('PROMO') && (
-												<View className='bg-[#F9C513]/20 rounded-lg px-3 py-1 mb-3 self-start flex-row items-center'>
+												<View className='bg-[#F9C513]/20 rounded-lg px-3 py-1 mb-3 self-start flex-row items-center border border-[#F9C513]/30'>
 													<Ionicons name='star' size={14} color='#F9C513' />
 													<Text className='text-[#F9C513] text-xs font-bold ml-1'>
 														MOST POPULAR
@@ -333,13 +379,13 @@ const MemberSubscription = () => {
 											)}
 											{membership.features &&
 												membership.features.length > 0 && (
-													<View className='mb-4'>
+													<View className='mb-4 pt-3 border-t border-bg-darker/20'>
 														{membership.features
 															.slice(0, 3)
 															.map((feature: string, index: number) => (
 																<View
 																	key={index}
-																	className='flex-row items-center mb-2'
+																	className='flex-row items-center mb-2 pl-2 py-1 rounded border border-bg-darker/10'
 																>
 																	<Ionicons
 																		name='checkmark-circle'
@@ -352,18 +398,92 @@ const MemberSubscription = () => {
 																</View>
 															))}
 														{membership.features.length > 3 && (
-															<Text className='text-text-secondary text-sm italic ml-6'>
+															<Text className='text-text-secondary text-sm italic ml-6 mt-2'>
 																+{membership.features.length - 3} more features
 															</Text>
 														)}
 													</View>
 												)}
-											<GradientButton
-												onPress={() => handlePurchase(membership)}
-												className='mt-2'
-											>
-												Switch to this Plan
-											</GradientButton>
+											{(() => {
+												const pendingRequest = getPendingRequest(membership.id);
+												const isExpired = pendingRequest && isRequestExpired(pendingRequest.expiresAt);
+												const timeRemaining = pendingRequest ? getTimeRemaining(pendingRequest.expiresAt) : 0;
+
+												if (pendingRequest && pendingRequest.status === 'PENDING' && !isExpired) {
+													return (
+														<View className='mt-2'>
+															<View className='bg-[#F9C513]/20 border border-[#F9C513]/30 rounded-xl p-3 mb-2'>
+																<View className='flex-row items-center justify-center mb-1'>
+																	<Ionicons name='time-outline' size={16} color='#F9C513' />
+																	<Text className='text-[#F9C513] font-semibold ml-2'>
+																		Request Pending
+																	</Text>
+																</View>
+																<Text className='text-text-secondary text-xs text-center'>
+																	Expires in {timeRemaining}s - Waiting for admin approval
+																</Text>
+															</View>
+														</View>
+													);
+												}
+
+												if (pendingRequest && (isExpired || pendingRequest.status === 'EXPIRED')) {
+													return (
+														<View className='mt-2'>
+															<View className='bg-red-500/20 border border-red-500/30 rounded-xl p-3 mb-2'>
+																<View className='flex-row items-center justify-center mb-1'>
+																	<Ionicons name='close-circle-outline' size={16} color='#EF4444' />
+																	<Text className='text-red-400 font-semibold ml-2'>
+																		Request Expired
+																	</Text>
+																</View>
+																<Text className='text-text-secondary text-xs text-center mb-2'>
+																	Your request expired. You can resend it.
+																</Text>
+															</View>
+															<GradientButton
+																onPress={() => handlePurchase(membership)}
+																className='mt-2'
+															>
+																Resend Request
+															</GradientButton>
+														</View>
+													);
+												}
+
+												if (pendingRequest && pendingRequest.status === 'REJECTED') {
+													return (
+														<View className='mt-2'>
+															<View className='bg-red-500/20 border border-red-500/30 rounded-xl p-3 mb-2'>
+																<View className='flex-row items-center justify-center mb-1'>
+																	<Ionicons name='close-circle-outline' size={16} color='#EF4444' />
+																	<Text className='text-red-400 font-semibold ml-2'>
+																		Request Rejected
+																	</Text>
+																</View>
+																<Text className='text-text-secondary text-xs text-center mb-2'>
+																	Your request was rejected. You can try again.
+																</Text>
+															</View>
+															<GradientButton
+																onPress={() => handlePurchase(membership)}
+																className='mt-2'
+															>
+																Try Again
+															</GradientButton>
+														</View>
+													);
+												}
+
+												return (
+													<GradientButton
+														onPress={() => handlePurchase(membership)}
+														className='mt-2'
+													>
+														Request Switch
+													</GradientButton>
+												);
+											})()}
 										</View>
 									))}
 							</View>
@@ -372,8 +492,8 @@ const MemberSubscription = () => {
 				) : (
 					<>
 						{/* No Subscription State */}
-						<View className='bg-bg-primary rounded-xl p-6 mb-6 items-center'>
-							<View className='bg-[#F9C513]/20 rounded-full p-4 mb-4'>
+						<View className='bg-bg-primary rounded-xl p-6 mb-6 items-center border border-[#F9C513]/20'>
+							<View className='bg-[#F9C513]/20 rounded-full p-4 mb-4 border-2 border-[#F9C513]/30'>
 								<Ionicons name='card-outline' size={48} color='#F9C513' />
 							</View>
 							<Text className='text-2xl font-bold text-text-primary mb-2'>
@@ -389,7 +509,7 @@ const MemberSubscription = () => {
 
 						{/* Available Plans */}
 						<View className='mb-6'>
-							<Text className='text-xl font-semibold text-text-primary mb-4'>
+							<Text className='text-xl font-semibold text-text-primary mb-4 pb-4 border-b border-[#F9C513]/20'>
 								Available Plans
 							</Text>
 							<Text className='text-text-secondary mb-4'>
@@ -405,7 +525,7 @@ const MemberSubscription = () => {
 									}`}
 								>
 									{membership.name.includes('PROMO') && (
-										<View className='bg-[#F9C513]/20 rounded-lg px-3 py-1 mb-3 self-start flex-row items-center'>
+										<View className='bg-[#F9C513]/20 rounded-lg px-3 py-1 mb-3 self-start flex-row items-center border border-[#F9C513]/30'>
 											<Ionicons name='star' size={14} color='#F9C513' />
 											<Text className='text-[#F9C513] text-xs font-bold ml-1'>
 												MOST POPULAR
@@ -429,12 +549,12 @@ const MemberSubscription = () => {
 									)}
 
 									{membership.features && membership.features.length > 0 && (
-										<View className='mb-4'>
+										<View className='mb-4 pt-3 border-t border-bg-darker/20'>
 											{membership.features.map(
 												(feature: string, index: number) => (
 													<View
 														key={index}
-														className='flex-row items-center mb-2'
+														className='flex-row items-center mb-2 pl-2 py-1 rounded border border-bg-darker/10'
 													>
 														<Ionicons
 															name='checkmark-circle'
@@ -450,12 +570,86 @@ const MemberSubscription = () => {
 										</View>
 									)}
 
-									<GradientButton
-										onPress={() => handlePurchase(membership)}
-										className='mt-2'
-									>
-										Subscribe Now
-									</GradientButton>
+									{(() => {
+										const pendingRequest = getPendingRequest(membership.id);
+										const isExpired = pendingRequest && isRequestExpired(pendingRequest.expiresAt);
+										const timeRemaining = pendingRequest ? getTimeRemaining(pendingRequest.expiresAt) : 0;
+
+										if (pendingRequest && pendingRequest.status === 'PENDING' && !isExpired) {
+											return (
+												<View className='mt-2'>
+													<View className='bg-[#F9C513]/20 border border-[#F9C513]/30 rounded-xl p-3 mb-2'>
+														<View className='flex-row items-center justify-center mb-1'>
+															<Ionicons name='time-outline' size={16} color='#F9C513' />
+															<Text className='text-[#F9C513] font-semibold ml-2'>
+																Request Pending
+															</Text>
+														</View>
+														<Text className='text-text-secondary text-xs text-center'>
+															Expires in {timeRemaining}s - Waiting for admin approval
+														</Text>
+													</View>
+												</View>
+											);
+										}
+
+										if (pendingRequest && (isExpired || pendingRequest.status === 'EXPIRED')) {
+											return (
+												<View className='mt-2'>
+													<View className='bg-red-500/20 border border-red-500/30 rounded-xl p-3 mb-2'>
+														<View className='flex-row items-center justify-center mb-1'>
+															<Ionicons name='close-circle-outline' size={16} color='#EF4444' />
+															<Text className='text-red-400 font-semibold ml-2'>
+																Request Expired
+															</Text>
+														</View>
+														<Text className='text-text-secondary text-xs text-center mb-2'>
+															Your request expired. You can resend it.
+														</Text>
+													</View>
+													<GradientButton
+														onPress={() => handlePurchase(membership)}
+														className='mt-2'
+													>
+														Resend Request
+													</GradientButton>
+												</View>
+											);
+										}
+
+										if (pendingRequest && pendingRequest.status === 'REJECTED') {
+											return (
+												<View className='mt-2'>
+													<View className='bg-red-500/20 border border-red-500/30 rounded-xl p-3 mb-2'>
+														<View className='flex-row items-center justify-center mb-1'>
+															<Ionicons name='close-circle-outline' size={16} color='#EF4444' />
+															<Text className='text-red-400 font-semibold ml-2'>
+																Request Rejected
+															</Text>
+														</View>
+														<Text className='text-text-secondary text-xs text-center mb-2'>
+															Your request was rejected. You can try again.
+														</Text>
+													</View>
+													<GradientButton
+														onPress={() => handlePurchase(membership)}
+														className='mt-2'
+													>
+														Try Again
+													</GradientButton>
+												</View>
+											);
+										}
+
+										return (
+											<GradientButton
+												onPress={() => handlePurchase(membership)}
+												className='mt-2'
+											>
+												Request Subscription
+											</GradientButton>
+										);
+									})()}
 								</View>
 							))}
 						</View>
@@ -473,25 +667,36 @@ const MemberSubscription = () => {
 				}}
 			>
 				<View className='flex-1 bg-bg-darker justify-center px-5'>
-					<View className='bg-bg-primary rounded-2xl p-6'>
-						<View className='items-center mb-4'>
-							<View className='bg-[#F9C513]/20 rounded-full p-4'>
+					<View className='bg-bg-primary rounded-2xl p-6 border-2 border-[#F9C513]/30'>
+						<View className='items-center mb-4 pb-4 border-b border-bg-darker/30'>
+							<View className='bg-[#F9C513]/20 rounded-full p-4 border-2 border-[#F9C513]/30'>
 								<Ionicons name='card' size={48} color='#F9C513' />
 							</View>
 						</View>
-						<Text className='text-2xl font-bold text-text-primary mb-4 text-center'>
-							Subscribe to {selectedMembership?.name}
+						<Text className='text-2xl font-bold text-text-primary mb-4 text-center pb-4 border-b border-bg-darker/30'>
+							Request Subscription to {selectedMembership?.name}
 						</Text>
+						<View className='bg-[#F9C513]/20 border border-[#F9C513]/30 rounded-xl p-3 mb-4'>
+							<View className='flex-row items-center mb-2'>
+								<Ionicons name='information-circle-outline' size={20} color='#F9C513' />
+								<Text className='text-[#F9C513] font-semibold ml-2'>
+									Request Process
+								</Text>
+							</View>
+							<Text className='text-text-secondary text-sm'>
+								Your request will be sent to the admin for approval. It will expire in 1 minute if not approved. You can resend the request if it expires.
+							</Text>
+						</View>
 						{selectedMembership && (
 							<View className='mb-6'>
-								<View className='bg-bg-darker rounded-xl p-4 mb-4'>
-									<View className='flex-row justify-between mb-2'>
+								<View className='bg-bg-darker rounded-xl p-4 mb-4 border border-[#F9C513]/20'>
+									<View className='flex-row justify-between mb-2 pb-2 border-b border-bg-primary/30'>
 										<Text className='text-text-secondary'>Plan</Text>
 										<Text className='text-text-primary font-semibold'>
 											{selectedMembership.name}
 										</Text>
 									</View>
-									<View className='flex-row justify-between mb-2'>
+									<View className='flex-row justify-between mb-2 pb-2 border-b border-bg-primary/30'>
 										<Text className='text-text-secondary'>Duration</Text>
 										<Text className='text-text-primary font-semibold'>
 											{selectedMembership.durationType}
@@ -506,8 +711,8 @@ const MemberSubscription = () => {
 								</View>
 								{selectedMembership.features &&
 									selectedMembership.features.length > 0 && (
-										<View>
-											<Text className='text-text-primary font-semibold mb-2'>
+										<View className='pt-4 border-t border-bg-darker/30'>
+											<Text className='text-text-primary font-semibold mb-2 pb-2 border-b border-bg-darker/20'>
 												Included Features:
 											</Text>
 											{selectedMembership.features
@@ -515,7 +720,7 @@ const MemberSubscription = () => {
 												.map((feature: string, index: number) => (
 													<View
 														key={index}
-														className='flex-row items-center mb-1'
+														className='flex-row items-center mb-1 pl-2 py-1 rounded border border-bg-darker/10'
 													>
 														<Ionicons
 															name='checkmark-circle'
@@ -528,7 +733,7 @@ const MemberSubscription = () => {
 													</View>
 												))}
 											{selectedMembership.features.length > 4 && (
-												<Text className='text-text-secondary text-sm italic ml-6'>
+												<Text className='text-text-secondary text-sm italic ml-6 mt-2'>
 													+{selectedMembership.features.length - 4} more
 													features
 												</Text>
@@ -552,11 +757,11 @@ const MemberSubscription = () => {
 							</View>
 							<View className='flex-1'>
 								<GradientButton
-									onPress={confirmPurchase}
-									loading={purchasing}
+									onPress={confirmRequest}
+									loading={requesting}
 									style={{ height: 56 }}
 								>
-									Confirm Subscription
+									Send Request
 								</GradientButton>
 							</View>
 						</View>

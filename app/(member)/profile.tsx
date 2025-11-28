@@ -288,7 +288,7 @@ const MemberProfile = () => {
 				contentContainerClassName='p-5'
 				showsVerticalScrollIndicator={false}
 			>
-				<View className='flex-row items-center justify-between mb-6'>
+				<View className='flex-row items-center justify-between mb-6 pb-4 border-b border-[#F9C513]/20'>
 					<View>
 						<Text className='text-3xl font-bold text-text-primary'>
 							Profile
@@ -300,7 +300,7 @@ const MemberProfile = () => {
 					{!isEditing && (
 						<TouchableOpacity
 							onPress={() => setIsEditing(true)}
-							className='flex-row items-center bg-bg-primary px-4 py-2 rounded-lg'
+							className='flex-row items-center bg-bg-primary px-4 py-2 rounded-lg border border-[#F9C513]/20'
 						>
 							<Ionicons name='create-outline' size={20} color='#F9C513' />
 							<Text className='text-[#F9C513] font-semibold ml-2'>Edit</Text>
@@ -308,8 +308,8 @@ const MemberProfile = () => {
 					)}
 				</View>
 
-				<View className='items-center mb-6'>
-					<View className='bg-[#F9C513] rounded-full w-24 h-24 items-center justify-center mb-4'>
+				<View className='items-center mb-6 pb-6 border-b border-[#F9C513]/20'>
+					<View className='bg-[#F9C513] rounded-full w-24 h-24 items-center justify-center mb-4 border-2 border-bg-darker/30'>
 						<Text className='text-bg-darker font-bold text-3xl'>
 							{firstName.charAt(0) || user?.firstName?.charAt(0)}
 							{lastName.charAt(0) || user?.lastName?.charAt(0)}
@@ -418,7 +418,7 @@ const MemberProfile = () => {
 											className={`px-4 py-2 rounded-lg border-2 ${
 												isSelected
 													? 'bg-[#F9C513]/20 border-[#F9C513]'
-													: 'bg-bg-darker border-bg-primary'
+													: 'bg-bg-darker border-[#F9C513]/30'
 											}`}
 										>
 											<View className='flex-row items-center'>
@@ -502,8 +502,8 @@ const MemberProfile = () => {
 					</View>
 				) : (
 					<>
-						<View className='bg-bg-primary rounded-xl p-5 mb-4'>
-							<View className='flex-row items-center justify-between mb-4'>
+						<View className='bg-bg-primary rounded-xl p-5 mb-4 border border-[#F9C513]/20'>
+							<View className='flex-row items-center justify-between mb-4 pb-4 border-b border-bg-darker/30'>
 								<Text className='text-xl font-semibold text-text-primary'>
 									Personal Information
 								</Text>
@@ -547,14 +547,14 @@ const MemberProfile = () => {
 								)}
 						</View>
 
-						<View className='bg-bg-primary rounded-xl p-5 mb-4'>
-							<View className='flex-row items-center justify-between mb-4'>
+						<View className='bg-bg-primary rounded-xl p-5 mb-4 border border-[#F9C513]/20'>
+							<View className='flex-row items-center justify-between mb-4 pb-4 border-b border-bg-darker/30'>
 								<Text className='text-xl font-semibold text-text-primary'>
 									Account Credentials
 								</Text>
 								<TouchableOpacity
 									onPress={() => setIsEditingCredentials(true)}
-									className='flex-row items-center'
+									className='flex-row items-center px-3 py-1 rounded-lg border border-[#F9C513]/20'
 								>
 									<Ionicons name='create-outline' size={18} color='#F9C513' />
 									<Text className='text-[#F9C513] font-semibold ml-1'>
@@ -577,8 +577,8 @@ const MemberProfile = () => {
 						</View>
 
 						{isEditingCredentials && (
-							<View className='bg-bg-primary rounded-xl p-5 mb-4 gap-4'>
-								<Text className='text-xl font-semibold text-text-primary mb-2'>
+							<View className='bg-bg-primary rounded-xl p-5 mb-4 gap-4 border border-[#F9C513]/20'>
+								<Text className='text-xl font-semibold text-text-primary mb-2 pb-4 border-b border-bg-darker/30'>
 									Edit Credentials
 								</Text>
 								<Input
@@ -646,8 +646,8 @@ const MemberProfile = () => {
 						)}
 
 						{user?.membershipDetails && (
-							<View className='bg-bg-primary rounded-xl p-5'>
-								<Text className='text-xl font-semibold text-text-primary mb-4'>
+							<View className='bg-bg-primary rounded-xl p-5 border border-[#F9C513]/20'>
+								<Text className='text-xl font-semibold text-text-primary mb-4 pb-4 border-b border-bg-darker/30'>
 									Fitness Goals
 								</Text>
 								{user.membershipDetails.fitnessGoal &&
@@ -657,7 +657,7 @@ const MemberProfile = () => {
 												(goal: string, index: number) => (
 													<View
 														key={index}
-														className='bg-bg-darker px-3 py-2 rounded-lg mr-2 mb-2'
+														className='bg-bg-darker px-3 py-2 rounded-lg mr-2 mb-2 border border-[#F9C513]/30'
 													>
 														<Text className='text-text-primary'>{goal}</Text>
 													</View>
