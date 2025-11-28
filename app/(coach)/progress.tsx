@@ -13,10 +13,11 @@ import {
 } from '@/graphql/queries';
 import { useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
 	FlatList,
 	Modal,
+	RefreshControl,
 	ScrollView,
 	Text,
 	TouchableOpacity,
@@ -26,15 +27,31 @@ import {
 const CoachProgress = () => {
 	const [selectedClient, setSelectedClient] = useState<any>(null);
 	const [showClientProgress, setShowClientProgress] = useState(false);
+	const [refreshing, setRefreshing] = useState(false);
 
 	const { user } = useAuth();
-	const { data: clientsData } = useQuery<GetUsersQuery, GetUsersQueryVariables>(
+	const { data: clientsData, refetch: refetchClients } = useQuery<GetUsersQuery, GetUsersQueryVariables>(
 		GET_USERS_QUERY,
 		{
 			variables: { role: 'member' },
 			fetchPolicy: 'cache-and-network',
 		}
 	);
+
+	// Refetch data when screen is mounted
+	useEffect(() => {
+		refetchClients();
+	}, [refetchClients]);
+
+	// Handle pull-to-refresh
+	const onRefresh = async () => {
+		setRefreshing(true);
+		try {
+			await refetchClients();
+		} finally {
+			setRefreshing(false);
+		}
+	};
 
 	// Filter clients to only show coach's clients
 	const clients = useMemo(() => {
@@ -121,6 +138,9 @@ const CoachProgress = () => {
 				className='flex-1'
 				contentContainerClassName='p-5'
 				showsVerticalScrollIndicator={false}
+				refreshControl={
+					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor='#F9C513' />
+				}
 			>
 				<View className='flex-row justify-between items-center mb-6'>
 					<View>

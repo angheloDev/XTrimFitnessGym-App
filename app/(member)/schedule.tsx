@@ -4,8 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { GET_CLIENT_SESSIONS_QUERY } from '@/graphql/queries';
 import { COMPLETE_SESSION_MUTATION } from '@/graphql/mutations';
 import { useQuery, useMutation } from '@apollo/client/react';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
+	RefreshControl,
 	ScrollView,
 	Text,
 	View,
@@ -20,6 +21,7 @@ import GradientButton from '@/components/GradientButton';
 
 const MemberSchedule = () => {
 	const { user } = useAuth();
+	const [refreshing, setRefreshing] = useState(false);
 	const [selectedSession, setSelectedSession] = useState<any>(null);
 	const [showWeightModal, setShowWeightModal] = useState(false);
 	const [weight, setWeight] = useState('');
@@ -32,6 +34,25 @@ const MemberSchedule = () => {
 		},
 		fetchPolicy: 'cache-and-network',
 	});
+
+	// Refetch data when screen is mounted
+	useEffect(() => {
+		if (user?.id) {
+			refetch();
+		}
+	}, [user?.id, refetch]);
+
+	// Handle pull-to-refresh
+	const onRefresh = async () => {
+		setRefreshing(true);
+		try {
+			if (user?.id) {
+				await refetch();
+			}
+		} finally {
+			setRefreshing(false);
+		}
+	};
 
 	const [completeSession, { loading: completing }] = useMutation(
 		COMPLETE_SESSION_MUTATION,
@@ -103,6 +124,9 @@ const MemberSchedule = () => {
 				className='flex-1'
 				contentContainerClassName='p-5'
 				showsVerticalScrollIndicator={false}
+				refreshControl={
+					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor='#F9C513' />
+				}
 			>
 				<View className='mb-6'>
 					<Text className='text-3xl font-bold text-text-primary'>

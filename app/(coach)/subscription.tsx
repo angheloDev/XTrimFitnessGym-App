@@ -2,14 +2,30 @@ import FixedView from '@/components/FixedView';
 import TabHeader from '@/components/TabHeader';
 import { GET_CURRENT_MEMBERSHIP_QUERY } from '@/graphql/queries';
 import { useQuery } from '@apollo/client/react';
-import React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const CoachSubscription = () => {
-	const { data: currentMembershipData } = useQuery(GET_CURRENT_MEMBERSHIP_QUERY, {
+	const [refreshing, setRefreshing] = useState(false);
+	const { data: currentMembershipData, refetch: refetchMembership } = useQuery(GET_CURRENT_MEMBERSHIP_QUERY, {
 		fetchPolicy: 'cache-and-network',
 	});
+
+	// Refetch data when screen is mounted
+	useEffect(() => {
+		refetchMembership();
+	}, [refetchMembership]);
+
+	// Handle pull-to-refresh
+	const onRefresh = async () => {
+		setRefreshing(true);
+		try {
+			await refetchMembership();
+		} finally {
+			setRefreshing(false);
+		}
+	};
 
 	const currentMembership = currentMembershipData?.getCurrentMembership;
 
@@ -28,6 +44,9 @@ const CoachSubscription = () => {
 				className='flex-1'
 				contentContainerClassName='p-5'
 				showsVerticalScrollIndicator={false}
+				refreshControl={
+					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor='#F9C513' />
+				}
 			>
 				<View className='flex-row justify-between items-center mb-6'>
 					<View>

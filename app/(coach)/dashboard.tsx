@@ -10,9 +10,10 @@ import { formatTimeTo12Hour } from '@/utils/time-utils';
 import { useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import {
 	FlatList,
+	RefreshControl,
 	ScrollView,
 	Text,
 	TouchableOpacity,
@@ -22,8 +23,9 @@ import {
 const CoachDashboard = () => {
 	const { user } = useAuth();
 	const router = useRouter();
+	const [refreshing, setRefreshing] = useState(false);
 
-	const { data: sessionsData, loading: sessionsLoading } = useQuery(
+	const { data: sessionsData, loading: sessionsLoading, refetch: refetchSessions } = useQuery(
 		GET_COACH_SESSIONS_QUERY,
 		{
 			variables: { coachId: user?.id || '' },
@@ -32,14 +34,39 @@ const CoachDashboard = () => {
 		}
 	);
 
-	const { data: clientsData } = useQuery(GET_USERS_QUERY, {
+	const { data: clientsData, refetch: refetchClients } = useQuery(GET_USERS_QUERY, {
 		variables: { role: 'member' },
 		fetchPolicy: 'cache-and-network',
 	});
 
-	const { data: requestsData } = useQuery(GET_PENDING_COACH_REQUESTS_QUERY, {
+	const { data: requestsData, refetch: refetchRequests } = useQuery(GET_PENDING_COACH_REQUESTS_QUERY, {
 		fetchPolicy: 'cache-and-network',
 	});
+
+	// Refetch data when screen is mounted
+	useEffect(() => {
+		if (user?.id) {
+			refetchSessions();
+		}
+		refetchClients();
+		refetchRequests();
+	}, [user?.id, refetchSessions, refetchClients, refetchRequests]);
+
+	// Handle pull-to-refresh
+	const onRefresh = async () => {
+		setRefreshing(true);
+		try {
+			const promises = [];
+			if (user?.id) {
+				promises.push(refetchSessions());
+			}
+			promises.push(refetchClients());
+			promises.push(refetchRequests());
+			await Promise.all(promises);
+		} finally {
+			setRefreshing(false);
+		}
+	};
 
 	// Memoize sessions to prevent creating new array on every render
 	const sessions = useMemo(
@@ -114,6 +141,9 @@ const CoachDashboard = () => {
 				className='flex-1'
 				contentContainerClassName='p-5'
 				showsVerticalScrollIndicator={false}
+				refreshControl={
+					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor='#F9C513' />
+				}
 			>
 				<View className='mb-6'>
 					<Text className='text-3xl font-bold text-text-primary'>

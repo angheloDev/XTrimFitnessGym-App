@@ -16,11 +16,12 @@ import { formatTimeRangeTo12Hour } from '@/utils/time-utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
 	Alert,
 	FlatList,
 	Modal,
+	RefreshControl,
 	ScrollView,
 	Text,
 	TouchableOpacity,
@@ -30,11 +31,12 @@ import {
 const MemberCoaches = () => {
 	const { user } = useAuth();
 	const router = useRouter();
+	const [refreshing, setRefreshing] = useState(false);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [selectedCoach, setSelectedCoach] = useState<any>(null);
 	const [showProfileModal, setShowProfileModal] = useState(false);
 
-	const { data: coachesData, loading } = useQuery<
+	const { data: coachesData, loading, refetch: refetchCoaches } = useQuery<
 		GetUsersQuery,
 		GetUsersQueryVariables
 	>(GET_USERS_QUERY, {
@@ -50,6 +52,28 @@ const MemberCoaches = () => {
 			fetchPolicy: 'cache-and-network',
 		}
 	);
+
+	// Refetch data when screen is mounted
+	useEffect(() => {
+		refetchCoaches();
+		if (user?.id) {
+			refetchRequests();
+		}
+	}, [user?.id, refetchCoaches, refetchRequests]);
+
+	// Handle pull-to-refresh
+	const onRefresh = async () => {
+		setRefreshing(true);
+		try {
+			const promises = [refetchCoaches()];
+			if (user?.id) {
+				promises.push(refetchRequests());
+			}
+			await Promise.all(promises);
+		} finally {
+			setRefreshing(false);
+		}
+	};
 
 	const [createCoachRequest, { loading: requesting }] = useMutation(
 		CREATE_COACH_REQUEST_MUTATION,
@@ -297,6 +321,9 @@ const MemberCoaches = () => {
 				className='flex-1'
 				contentContainerClassName='p-5'
 				showsVerticalScrollIndicator={false}
+				refreshControl={
+					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor='#F9C513' />
+				}
 			>
 				<View className='flex-row items-center justify-between mb-6'>
 					<View>

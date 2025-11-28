@@ -15,12 +15,13 @@ import {
 } from '@/graphql/queries';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatTimeTo12Hour } from '@/utils/time-utils';
 import {
 	Alert,
 	FlatList,
 	Modal,
+	RefreshControl,
 	ScrollView,
 	Text,
 	TouchableOpacity,
@@ -37,6 +38,7 @@ const gymAreas = [
 
 const CoachSchedule = () => {
 	const { user } = useAuth();
+	const [refreshing, setRefreshing] = useState(false);
 	const [showCreateModal, setShowCreateModal] = useState(false);
 	const [selectedClients, setSelectedClients] = useState<string[]>([]);
 	const [sessionName, setSessionName] = useState('');
@@ -51,6 +53,25 @@ const CoachSchedule = () => {
 		variables: { coachId: user?.id },
 		fetchPolicy: 'cache-and-network',
 	});
+
+	// Refetch data when screen is mounted
+	useEffect(() => {
+		if (user?.id) {
+			refetch();
+		}
+	}, [user?.id, refetch]);
+
+	// Handle pull-to-refresh
+	const onRefresh = async () => {
+		setRefreshing(true);
+		try {
+			if (user?.id) {
+				await refetch();
+			}
+		} finally {
+			setRefreshing(false);
+		}
+	};
 
 	const { data: clientsData } = useQuery(GET_UPCOMING_SESSIONS_QUERY, {
 		skip: true, // TODO: Add query to get coach's clients
@@ -146,6 +167,9 @@ const CoachSchedule = () => {
 				className='flex-1'
 				contentContainerClassName='p-5'
 				showsVerticalScrollIndicator={false}
+				refreshControl={
+					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor='#F9C513' />
+				}
 			>
 				<View className='flex-row justify-between items-center mb-6'>
 					<Text className='text-3xl font-bold text-text-primary'>Schedule</Text>

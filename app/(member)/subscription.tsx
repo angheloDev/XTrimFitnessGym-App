@@ -19,11 +19,12 @@ import { useAppDispatch } from '@/store/hooks';
 import { updateUser } from '@/store/slices/userSlice';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
 	ActivityIndicator,
 	Alert,
 	Modal,
+	RefreshControl,
 	ScrollView,
 	Text,
 	TouchableOpacity,
@@ -33,6 +34,7 @@ import {
 const MemberSubscription = () => {
 	const { user } = useAuth();
 	const dispatch = useAppDispatch();
+	const [refreshing, setRefreshing] = useState(false);
 	const [selectedMembership, setSelectedMembership] = useState<any>(null);
 	const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
@@ -158,6 +160,23 @@ const MemberSubscription = () => {
 		});
 	};
 
+	// Refetch data when screen is mounted
+	useEffect(() => {
+		refetchMemberships();
+		refetchCurrent();
+		refetchRequests();
+	}, [refetchMemberships, refetchCurrent, refetchRequests]);
+
+	// Handle pull-to-refresh
+	const onRefresh = async () => {
+		setRefreshing(true);
+		try {
+			await Promise.all([refetchMemberships(), refetchCurrent(), refetchRequests()]);
+		} finally {
+			setRefreshing(false);
+		}
+	};
+
 	// Check if membership was just approved (request was approved and we now have a subscription)
 	React.useEffect(() => {
 		const approvedRequest = subscriptionRequests.find(
@@ -222,6 +241,9 @@ const MemberSubscription = () => {
 				className='flex-1'
 				contentContainerClassName='p-5'
 				showsVerticalScrollIndicator={false}
+				refreshControl={
+					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor='#F9C513' />
+				}
 			>
 				{currentSubscription ? (
 					<>

@@ -20,9 +20,10 @@ import {
 import { useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import {
 	FlatList,
+	RefreshControl,
 	ScrollView,
 	Text,
 	TouchableOpacity,
@@ -32,21 +33,22 @@ import {
 const MemberDashboard = () => {
 	const { user } = useAuth();
 	const router = useRouter();
+	const [refreshing, setRefreshing] = useState(false);
 
-	const { data: sessionsData, loading } = useQuery<GetUpcomingSessionsQuery>(
+	const { data: sessionsData, loading, refetch: refetchSessions } = useQuery<GetUpcomingSessionsQuery>(
 		GET_UPCOMING_SESSIONS_QUERY,
 		{
 			fetchPolicy: 'cache-and-network',
 		}
 	);
 
-	const { data: goalsData } = useQuery<GetGoalsQuery>(GET_GOALS_QUERY, {
+	const { data: goalsData, refetch: refetchGoals } = useQuery<GetGoalsQuery>(GET_GOALS_QUERY, {
 		variables: { clientId: user?.id || '', status: 'active' },
 		skip: !user?.id,
 		fetchPolicy: 'cache-and-network',
 	});
 
-	const { data: allSessionsData } = useQuery<GetClientSessionsQuery>(
+	const { data: allSessionsData, refetch: refetchAllSessions } = useQuery<GetClientSessionsQuery>(
 		GET_CLIENT_SESSIONS_QUERY,
 		{
 			variables: { clientId: user?.id || '' },
@@ -55,12 +57,37 @@ const MemberDashboard = () => {
 		}
 	);
 
-	const { data: membershipData } = useQuery<GetCurrentMembershipQuery>(
+	const { data: membershipData, refetch: refetchMembership } = useQuery<GetCurrentMembershipQuery>(
 		GET_CURRENT_MEMBERSHIP_QUERY,
 		{
 			fetchPolicy: 'cache-and-network',
 		}
 	);
+
+	// Refetch data when screen is mounted
+	useEffect(() => {
+		refetchSessions();
+		if (user?.id) {
+			refetchGoals();
+			refetchAllSessions();
+		}
+		refetchMembership();
+	}, [user?.id, refetchSessions, refetchGoals, refetchAllSessions, refetchMembership]);
+
+	// Handle pull-to-refresh
+	const onRefresh = async () => {
+		setRefreshing(true);
+		try {
+			const promises = [refetchSessions(), refetchMembership()];
+			if (user?.id) {
+				promises.push(refetchGoals());
+				promises.push(refetchAllSessions());
+			}
+			await Promise.all(promises);
+		} finally {
+			setRefreshing(false);
+		}
+	};
 
 	const sessions = sessionsData?.getUpcomingSessions || [];
 	const activeGoals = goalsData?.getGoals || [];
@@ -107,6 +134,9 @@ const MemberDashboard = () => {
 				className='flex-1'
 				contentContainerClassName='p-5'
 				showsVerticalScrollIndicator={false}
+				refreshControl={
+					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor='#F9C513' />
+				}
 			>
 				<View className='mb-6'>
 					<Text className='text-3xl font-bold text-text-primary'>
