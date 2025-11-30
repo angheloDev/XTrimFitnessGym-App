@@ -340,6 +340,13 @@ export const CANCEL_COACH_REQUEST_MUTATION = gql`
 	}
 `;
 
+// Remove client mutation
+export const REMOVE_CLIENT_MUTATION = gql`
+	mutation RemoveClient($clientId: ID!) {
+		removeClient(clientId: $clientId)
+	}
+`;
+
 // Subscription Request mutations
 export const CREATE_SUBSCRIPTION_REQUEST_MUTATION = gql`
 	mutation CreateSubscriptionRequest($input: CreateSubscriptionRequestInput!) {

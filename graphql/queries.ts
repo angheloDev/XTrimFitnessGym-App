@@ -244,6 +244,38 @@ export const GET_CURRENT_MEMBERSHIP_QUERY = gql`
 `;
 
 // User queries
+export const GET_USER_QUERY = gql`
+	query GetUser($id: ID!) {
+		getUser(id: $id) {
+			id
+			firstName
+			lastName
+			email
+			role
+			phoneNumber
+			membershipDetails {
+				membershipId
+				physiqueGoalType
+				fitnessGoal
+				workOutTime
+				coachesIds
+				hasEnteredDetails
+			}
+			coachDetails {
+				clientsIds
+				sessionsIds
+				specialization
+				ratings
+				yearsOfExperience
+				moreDetails
+				teachingDate
+				teachingTime
+				clientLimit
+			}
+		}
+	}
+`;
+
 export const GET_USERS_QUERY = gql`
 	query GetUsers($role: RoleType) {
 		getUsers(role: $role) {

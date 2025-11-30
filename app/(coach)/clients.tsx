@@ -6,12 +6,16 @@ import {
 	GetUsersQuery,
 	GetUsersQueryVariables,
 } from '@/graphql/generated/types';
-import { GET_USERS_QUERY } from '@/graphql/queries';
-import { useQuery } from '@apollo/client/react';
+import { REMOVE_CLIENT_MUTATION } from '@/graphql/mutations';
+import { GET_USERS_QUERY, GET_USER_QUERY } from '@/graphql/queries';
+import { useAppDispatch } from '@/store/hooks';
+import { updateUser } from '@/store/slices/userSlice';
+import { useMutation, useQuery, useLazyQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState, useEffect } from 'react';
 import {
+	Alert,
 	FlatList,
 	Modal,
 	RefreshControl,
@@ -23,6 +27,7 @@ import {
 
 const CoachClients = () => {
 	const { user } = useAuth();
+	const dispatch = useAppDispatch();
 	const router = useRouter();
 	const [refreshing, setRefreshing] = useState(false);
 	const [searchQuery, setSearchQuery] = useState('');
@@ -35,12 +40,14 @@ const CoachClients = () => {
 	>(GET_USERS_QUERY, {
 		variables: { role: 'member' },
 		fetchPolicy: 'cache-and-network',
+		pollInterval: 10000, // Poll every 10 seconds (less aggressive to prevent glitching)
+		notifyOnNetworkStatusChange: false, // Disable to reduce re-renders
 	});
 
-	// Refetch data when screen is mounted
-	useEffect(() => {
-		refetchClients();
-	}, [refetchClients]);
+	// Lazy query to refetch current user to ensure we have latest data
+	const [refetchCurrentUser] = useLazyQuery(GET_USER_QUERY, {
+		fetchPolicy: 'network-only', // Always fetch fresh data
+	});
 
 	// Handle pull-to-refresh
 	const onRefresh = async () => {
@@ -52,16 +59,34 @@ const CoachClients = () => {
 		}
 	};
 
-	// Filter clients to only show coach's clients
+	// Filter clients to only show coach's current clients
 	const allClients = useMemo(() => {
-		if (!clientsData?.getUsers || !user?.coachDetails?.clientsIds) {
+		if (!clientsData?.getUsers) {
 			return [];
 		}
-		const coachClientIds = user.coachDetails.clientsIds;
-		return clientsData.getUsers.filter((client: any) =>
-			coachClientIds.includes(client.id)
-		);
-	}, [clientsData, user]);
+		// Get coach's client IDs from coachDetails
+		const coachClientIds = user?.coachDetails?.clientsIds || [];
+		if (!coachClientIds || coachClientIds.length === 0) {
+			return [];
+		}
+		
+		// Normalize coach client IDs to strings for comparison (handle null values)
+		const normalizedCoachClientIds = coachClientIds
+			.filter((id: any) => id != null)
+			.map((id: any) => String(id));
+		
+		if (normalizedCoachClientIds.length === 0) {
+			return [];
+		}
+		
+		// Filter to only show clients that are in the coach's clientsIds array
+		return clientsData.getUsers.filter((client: any) => {
+			if (!client || !client.id) return false;
+			// Normalize client ID to string and check if it's in the coach's clientsIds array
+			const normalizedClientId = String(client.id);
+			return normalizedCoachClientIds.includes(normalizedClientId);
+		});
+	}, [clientsData, user?.coachDetails?.clientsIds]);
 
 	// Filter clients by search query
 	const filteredClients = useMemo(() => {
@@ -75,9 +100,57 @@ const CoachClients = () => {
 		);
 	}, [allClients, searchQuery]);
 
+	const [removeClientMutation] = useMutation(REMOVE_CLIENT_MUTATION, {
+		onCompleted: async () => {
+			// Refetch clients and user data
+			try {
+				await Promise.all([
+					refetchClients(),
+					user?.id
+						? refetchCurrentUser({
+								variables: { id: user.id },
+						  }).then((result) => {
+								const userData = (result.data as any)?.getUser;
+								if (userData) {
+									dispatch(updateUser(userData));
+								}
+						  })
+						: Promise.resolve(),
+				]);
+			} catch (error) {
+				console.error('Error refetching after removal:', error);
+			}
+			setShowProfileModal(false);
+			setSelectedClient(null);
+			Alert.alert('Success', 'Client removed successfully');
+		},
+		onError: (error) => {
+			Alert.alert('Error', error.message);
+		},
+	});
+
 	const handleClientPress = (client: any) => {
 		setSelectedClient(client);
 		setShowProfileModal(true);
+	};
+
+	const handleRemoveClient = (client: any) => {
+		Alert.alert(
+			'Remove Client',
+			`Are you sure you want to remove ${client.firstName} ${client.lastName} from your clients? They will be notified.`,
+			[
+				{ text: 'Cancel', style: 'cancel' },
+				{
+					text: 'Remove',
+					style: 'destructive',
+					onPress: () => {
+						removeClientMutation({
+							variables: { clientId: client.id },
+						});
+					},
+				},
+			]
+		);
 	};
 
 	const renderClientCard = ({ item }: { item: any }) => (
@@ -192,9 +265,15 @@ const CoachClients = () => {
 						<Ionicons name='people-outline' size={48} color='#8E8E93' />
 						<Text className='text-text-secondary mt-4 text-center'>
 							{allClients.length === 0
-								? 'No clients yet'
+								? 'No clients yet. Accept coach requests to see your clients here.'
 								: 'No clients found matching your search'}
 						</Text>
+						{user?.coachDetails?.clientsIds && user.coachDetails.clientsIds.length > 0 && (
+							<Text className='text-text-secondary text-xs mt-2 text-center'>
+								You have {user.coachDetails.clientsIds.length} client ID
+								{user.coachDetails.clientsIds.length !== 1 ? 's' : ''} in your profile
+							</Text>
+						)}
 					</View>
 				) : (
 					<FlatList
@@ -318,7 +397,7 @@ const CoachClients = () => {
 											</View>
 										)}
 
-									<View className='mt-4'>
+									<View className='mt-4 gap-3'>
 										<TouchableOpacity
 											onPress={() => {
 												setShowProfileModal(false);
@@ -337,6 +416,21 @@ const CoachClients = () => {
 												/>
 												<Text className='text-bg-darker font-semibold text-lg ml-2'>
 													View Progress
+												</Text>
+											</View>
+										</TouchableOpacity>
+										<TouchableOpacity
+											onPress={() => handleRemoveClient(selectedClient)}
+											className='bg-red-500/20 rounded-xl p-4 items-center border-2 border-red-500/40'
+										>
+											<View className='flex-row items-center'>
+												<Ionicons
+													name='person-remove-outline'
+													size={20}
+													color='#FF3B30'
+												/>
+												<Text className='text-red-500 font-semibold text-lg ml-2'>
+													Remove Client
 												</Text>
 											</View>
 										</TouchableOpacity>

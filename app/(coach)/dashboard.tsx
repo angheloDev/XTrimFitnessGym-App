@@ -40,7 +40,10 @@ const CoachDashboard = () => {
 	});
 
 	const { data: requestsData, refetch: refetchRequests } = useQuery(GET_PENDING_COACH_REQUESTS_QUERY, {
-		fetchPolicy: 'cache-and-network',
+		fetchPolicy: 'network-only', // Always fetch from network for real-time updates
+		pollInterval: 2000, // Poll every 2 seconds for real-time updates
+		errorPolicy: 'all', // Allow partial data even if some fields fail
+		notifyOnNetworkStatusChange: true,
 	});
 
 	// Refetch data when screen is mounted
@@ -83,7 +86,13 @@ const CoachDashboard = () => {
 		(s: any) => new Date(s.date) >= new Date() && s.status === 'scheduled'
 	);
 
-	const pendingRequests = (requestsData as any)?.getPendingCoachRequests || [];
+	const pendingRequests = useMemo(() => {
+		const allRequests = (requestsData as any)?.getPendingCoachRequests || [];
+		// Filter out requests with invalid client data
+		return allRequests.filter(
+			(request: any) => request && request.id && request.client && request.client.id
+		);
+	}, [requestsData]);
 
 	// Calculate sessions this month
 	const sessionsThisMonth = useMemo(() => {

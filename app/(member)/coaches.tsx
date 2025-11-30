@@ -11,12 +11,14 @@ import {
 	CANCEL_COACH_REQUEST_MUTATION,
 	CREATE_COACH_REQUEST_MUTATION,
 } from '@/graphql/mutations';
-import { GET_CLIENT_REQUESTS_QUERY, GET_USERS_QUERY } from '@/graphql/queries';
+import { GET_CLIENT_REQUESTS_QUERY, GET_USERS_QUERY, GET_USER_QUERY } from '@/graphql/queries';
+import { useAppDispatch } from '@/store/hooks';
+import { updateUser } from '@/store/slices/userSlice';
 import { formatTimeRangeTo12Hour } from '@/utils/time-utils';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useMutation, useQuery, useLazyQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useMemo, useState, useEffect } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import {
 	Alert,
 	FlatList,
@@ -30,11 +32,14 @@ import {
 
 const MemberCoaches = () => {
 	const { user } = useAuth();
+	const dispatch = useAppDispatch();
 	const router = useRouter();
 	const [refreshing, setRefreshing] = useState(false);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [selectedCoach, setSelectedCoach] = useState<any>(null);
 	const [showProfileModal, setShowProfileModal] = useState(false);
+	const [showMyCoachesModal, setShowMyCoachesModal] = useState(false);
+	const scrollViewRef = useRef<any>(null);
 
 	const { data: coachesData, loading, refetch: refetchCoaches } = useQuery<
 		GetUsersQuery,
@@ -42,6 +47,8 @@ const MemberCoaches = () => {
 	>(GET_USERS_QUERY, {
 		variables: { role: 'coach' },
 		fetchPolicy: 'cache-and-network',
+		pollInterval: 10000, // Poll every 10 seconds (less aggressive to prevent glitching)
+		notifyOnNetworkStatusChange: false, // Disable to reduce re-renders
 	});
 
 	const { data: requestsData, refetch: refetchRequests } = useQuery(
@@ -50,26 +57,56 @@ const MemberCoaches = () => {
 			variables: { clientId: user?.id || '', status: 'pending' },
 			skip: !user?.id,
 			fetchPolicy: 'cache-and-network',
+			pollInterval: user?.id ? 10000 : 0, // Poll every 10 seconds (less aggressive)
+			errorPolicy: 'all', // Allow partial data even if some fields fail
+			notifyOnNetworkStatusChange: false, // Disable to reduce re-renders
 		}
 	);
 
-	// Refetch data when screen is mounted
-	useEffect(() => {
-		refetchCoaches();
-		if (user?.id) {
-			refetchRequests();
+	// Lazy query to refetch current user to get updated coachesIds
+	const [refetchCurrentUser] = useLazyQuery(GET_USER_QUERY, {
+		fetchPolicy: 'network-only', // Always fetch fresh data
+	});
+
+	// Refetch function that updates both coaches and user data
+	const refetchAllData = useCallback(async () => {
+		if (refreshing) return; // Prevent multiple simultaneous refetches
+		try {
+			await Promise.all([
+				refetchCoaches(),
+				user?.id ? refetchRequests() : Promise.resolve(),
+			]);
+			// Refetch current user to get updated coachesIds
+			if (user?.id) {
+				try {
+					const result = await refetchCurrentUser({
+						variables: { id: user.id },
+					});
+					const userData = (result.data as any)?.getUser;
+					if (userData) {
+						dispatch(updateUser(userData));
+					}
+				} catch (error) {
+					console.error('Error refetching user:', error);
+				}
+			}
+		} catch (error) {
+			console.error('Error refetching data:', error);
 		}
-	}, [user?.id, refetchCoaches, refetchRequests]);
+	}, [refetchCoaches, refetchRequests, refetchCurrentUser, user?.id, dispatch, refreshing]);
+
+	// Refetch data when screen comes into focus (removed useEffect to avoid duplicate refetches)
+	useFocusEffect(
+		useCallback(() => {
+			refetchAllData();
+		}, [refetchAllData])
+	);
 
 	// Handle pull-to-refresh
 	const onRefresh = async () => {
 		setRefreshing(true);
 		try {
-			const promises = [refetchCoaches()];
-			if (user?.id) {
-				promises.push(refetchRequests());
-			}
-			await Promise.all(promises);
+			await refetchAllData();
 		} finally {
 			setRefreshing(false);
 		}
@@ -99,19 +136,43 @@ const MemberCoaches = () => {
 	});
 
 	const coaches = useMemo(() => coachesData?.getUsers || [], [coachesData]);
-	const pendingRequests = useMemo(
-		() => (requestsData as any)?.getClientRequests || [],
-		[requestsData]
-	);
+	const pendingRequests = useMemo(() => {
+		const allRequests = (requestsData as any)?.getClientRequests || [];
+		// Filter out requests with invalid coach data
+		return allRequests.filter(
+			(request: any) => request && request.id && request.coach && request.coach.id
+		);
+	}, [requestsData]);
 	// Check if user has membership (has membershipId in membershipDetails)
 	const hasActiveMembership = !!user?.membershipDetails?.membershipId;
 
-	// Filter and sort coaches based on user's fitness goals
+	// Get current coaches (coaches the member already has)
+	const currentCoachIds = useMemo(() => {
+		return new Set(user?.membershipDetails?.coachesIds || []);
+	}, [user?.membershipDetails?.coachesIds]);
+
+	// Separate current coaches from available coaches
+	const { currentCoaches, availableCoaches } = useMemo(() => {
+		const current: any[] = [];
+		const available: any[] = [];
+
+		coaches.forEach((coach: any) => {
+			if (currentCoachIds.has(coach.id)) {
+				current.push(coach);
+			} else {
+				available.push(coach);
+			}
+		});
+
+		return { currentCoaches: current, availableCoaches: available };
+	}, [coaches, currentCoachIds]);
+
+	// Filter and sort available coaches based on user's fitness goals
 	const { recommendedCoaches, otherCoaches } = useMemo(() => {
-		if (!coaches.length || !user?.membershipDetails?.fitnessGoal) {
+		if (!availableCoaches.length || !user?.membershipDetails?.fitnessGoal) {
 			return {
 				recommendedCoaches: [],
-				otherCoaches: coaches,
+				otherCoaches: availableCoaches,
 			};
 		}
 
@@ -119,7 +180,7 @@ const MemberCoaches = () => {
 		const recommended: any[] = [];
 		const other: any[] = [];
 
-		coaches.forEach((coach: any) => {
+		availableCoaches.forEach((coach: any) => {
 			const coachSpecializations = coach.coachDetails?.specialization || [];
 			const hasMatchingSpecialization = userGoals.some((goal: string) =>
 				coachSpecializations.includes(goal)
@@ -152,7 +213,7 @@ const MemberCoaches = () => {
 		});
 
 		return { recommendedCoaches: recommended, otherCoaches: other };
-	}, [coaches, user]);
+	}, [availableCoaches, user]);
 
 	// Filter coaches by search query
 	const filteredRecommended = useMemo(() => {
@@ -257,30 +318,55 @@ const MemberCoaches = () => {
 		);
 	};
 
-	const renderCoachCard = ({ item }: { item: any }) => (
-		<TouchableOpacity
-			onPress={() => handleCoachPress(item)}
-			className='bg-bg-primary rounded-xl p-4 mb-3 border border-[#F9C513]/20'
-			disabled={item.isAtLimit}
-		>
-			<View className='flex-row'>
-				<View className='bg-[#F9C513] rounded-full w-16 h-16 items-center justify-center mr-4 border-2 border-bg-darker/30'>
-					<Text className='text-bg-darker font-bold text-xl'>
-						{item.firstName.charAt(0)}
-						{item.lastName.charAt(0)}
-					</Text>
-				</View>
-				<View className='flex-1'>
-					<View className='flex-row items-center justify-between mb-1'>
-						<Text className='text-text-primary font-semibold text-lg'>
-							Coach {item.firstName} {item.lastName}
+	const renderCoachCard = ({ item }: { item: any }) => {
+		const isCurrentCoach = currentCoachIds.has(item.id);
+		return (
+			<TouchableOpacity
+				onPress={() => handleCoachPress(item)}
+				className={`bg-bg-primary rounded-xl p-4 mb-3 border ${
+					isCurrentCoach
+						? 'border-green-500/40 bg-green-500/5'
+						: 'border-[#F9C513]/20'
+				}`}
+				disabled={item.isAtLimit}
+			>
+				<View className='flex-row'>
+					<View
+						className={`rounded-full w-16 h-16 items-center justify-center mr-4 border-2 ${
+							isCurrentCoach
+								? 'bg-green-500 border-green-500/50'
+								: 'bg-[#F9C513] border-bg-darker/30'
+						}`}
+					>
+						<Text
+							className={`font-bold text-xl ${
+								isCurrentCoach ? 'text-white' : 'text-bg-darker'
+							}`}
+						>
+							{item.firstName.charAt(0)}
+							{item.lastName.charAt(0)}
 						</Text>
-						{item.isAtLimit && (
-							<View className='bg-red-500/20 px-2 py-1 rounded border border-red-500/40'>
-								<Text className='text-red-500 text-xs font-semibold'>Full</Text>
-							</View>
-						)}
 					</View>
+					<View className='flex-1'>
+						<View className='flex-row items-center justify-between mb-1'>
+							<Text className='text-text-primary font-semibold text-lg'>
+								Coach {item.firstName} {item.lastName}
+							</Text>
+							<View className='flex-row items-center gap-2'>
+								{isCurrentCoach && (
+									<View className='bg-green-500/20 px-2 py-1 rounded border border-green-500/40'>
+										<Text className='text-green-500 text-xs font-semibold'>
+											My Coach
+										</Text>
+									</View>
+								)}
+								{item.isAtLimit && (
+									<View className='bg-red-500/20 px-2 py-1 rounded border border-red-500/40'>
+										<Text className='text-red-500 text-xs font-semibold'>Full</Text>
+									</View>
+								)}
+							</View>
+						</View>
 					{item.coachDetails?.specialization && (
 						<View className='flex-row flex-wrap mb-2'>
 							{item.coachDetails.specialization
@@ -312,12 +398,14 @@ const MemberCoaches = () => {
 				</View>
 			</View>
 		</TouchableOpacity>
-	);
+		);
+	};
 
 	return (
 		<FixedView className='flex-1 bg-bg-darker'>
 			<TabHeader showCoachIcon={false} />
 			<ScrollView
+				ref={scrollViewRef}
 				className='flex-1'
 				contentContainerClassName='p-5'
 				showsVerticalScrollIndicator={false}
@@ -345,6 +433,32 @@ const MemberCoaches = () => {
 						className='bg-bg-primary border border-[#F9C513]/20'
 					/>
 				</View>
+
+				{/* My Coaches Button */}
+				{currentCoaches.length > 0 && (
+					<View className='mb-6'>
+						<TouchableOpacity
+							onPress={() => setShowMyCoachesModal(true)}
+							className='bg-green-500/20 rounded-xl p-4 border border-green-500/40 flex-row items-center justify-between'
+						>
+							<View className='flex-row items-center'>
+								<View className='bg-green-500 rounded-full w-12 h-12 items-center justify-center mr-3'>
+									<Ionicons name='people' size={24} color='#fff' />
+								</View>
+								<View>
+									<Text className='text-text-primary font-semibold text-lg'>
+										My Coaches
+									</Text>
+									<Text className='text-text-secondary text-sm'>
+										{currentCoaches.length} active coach
+										{currentCoaches.length !== 1 ? 'es' : ''}
+									</Text>
+								</View>
+							</View>
+							<Ionicons name='chevron-forward' size={24} color='#34C759' />
+						</TouchableOpacity>
+					</View>
+				)}
 
 				{loading ? (
 					<View className='items-center justify-center py-20 bg-bg-primary rounded-xl border border-[#F9C513]/20'>
@@ -623,6 +737,60 @@ const MemberCoaches = () => {
 							)}
 						</ScrollView>
 					</View>
+				</View>
+			</Modal>
+
+			{/* My Coaches Modal */}
+			<Modal
+				visible={showMyCoachesModal}
+				animationType='slide'
+				transparent={false}
+				onRequestClose={() => {
+					setShowMyCoachesModal(false);
+				}}
+			>
+				<View className='flex-1 bg-bg-darker'>
+					<View className='bg-bg-primary border-b border-[#F9C513]/20 pt-12 pb-4 px-5'>
+						<View className='flex-row items-center justify-between'>
+							<View>
+								<Text className='text-2xl font-bold text-text-primary'>
+									My Coaches
+								</Text>
+								<Text className='text-text-secondary text-sm mt-1'>
+									{currentCoaches.length} active coach
+									{currentCoaches.length !== 1 ? 'es' : ''}
+								</Text>
+							</View>
+							<TouchableOpacity
+								onPress={() => setShowMyCoachesModal(false)}
+								className='p-2 rounded-full border border-bg-darker/30'
+							>
+								<Ionicons name='close' size={28} color='#8E8E93' />
+							</TouchableOpacity>
+						</View>
+					</View>
+
+					<ScrollView
+						className='flex-1'
+						contentContainerClassName='p-5'
+						showsVerticalScrollIndicator={false}
+					>
+						{currentCoaches.length === 0 ? (
+							<View className='bg-bg-primary rounded-xl p-6 items-center border border-[#F9C513]/20 mt-10'>
+								<Ionicons name='people-outline' size={48} color='#8E8E93' />
+								<Text className='text-text-secondary mt-4 text-center'>
+									You don't have any coaches yet
+								</Text>
+							</View>
+						) : (
+							<FlatList
+								data={currentCoaches}
+								keyExtractor={(item) => item.id}
+								renderItem={renderCoachCard}
+								scrollEnabled={false}
+							/>
+						)}
+					</ScrollView>
 				</View>
 			</Modal>
 		</FixedView>
