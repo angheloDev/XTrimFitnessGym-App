@@ -16,10 +16,9 @@ import {
 	GET_MY_SUBSCRIPTION_REQUESTS_QUERY,
 } from '@/graphql/queries';
 import { useAppDispatch } from '@/store/hooks';
-import { updateUser } from '@/store/slices/userSlice';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
 	ActivityIndicator,
 	Alert,
@@ -37,6 +36,7 @@ const MemberSubscription = () => {
 	const [refreshing, setRefreshing] = useState(false);
 	const [selectedMembership, setSelectedMembership] = useState<any>(null);
 	const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+	const [showRefundInfoModal, setShowRefundInfoModal] = useState(false);
 
 	// Fetch available membership plans
 	const {
@@ -171,7 +171,11 @@ const MemberSubscription = () => {
 	const onRefresh = async () => {
 		setRefreshing(true);
 		try {
-			await Promise.all([refetchMemberships(), refetchCurrent(), refetchRequests()]);
+			await Promise.all([
+				refetchMemberships(),
+				refetchCurrent(),
+				refetchRequests(),
+			]);
 		} finally {
 			setRefreshing(false);
 		}
@@ -242,7 +246,11 @@ const MemberSubscription = () => {
 				contentContainerClassName='p-5'
 				showsVerticalScrollIndicator={false}
 				refreshControl={
-					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor='#F9C513' />
+					<RefreshControl
+						refreshing={refreshing}
+						onRefresh={onRefresh}
+						tintColor='#F9C513'
+					/>
 				}
 			>
 				{currentSubscription ? (
@@ -267,9 +275,21 @@ const MemberSubscription = () => {
 
 						{/* Subscription Details */}
 						<View className='bg-bg-primary rounded-xl p-5 mb-6 border border-[#F9C513]/20'>
-							<Text className='text-xl font-semibold text-text-primary mb-4 pb-4 border-b border-bg-darker/30'>
-								Subscription Details
-							</Text>
+							<View className='flex-row items-center justify-between mb-4 pb-4 border-b border-bg-darker/30'>
+								<Text className='text-xl font-semibold text-text-primary'>
+									Subscription Details
+								</Text>
+								<TouchableOpacity
+									onPress={() => setShowRefundInfoModal(true)}
+									className='bg-[#F9C513]/20 rounded-full p-2 border border-[#F9C513]/30'
+								>
+									<Ionicons
+										name='information-circle-outline'
+										size={24}
+										color='#F9C513'
+									/>
+								</TouchableOpacity>
+							</View>
 
 							<View className='mb-4 pb-4 border-b border-bg-darker/20'>
 								<View className='flex-row items-center mb-2'>
@@ -371,7 +391,14 @@ const MemberSubscription = () => {
 									Explore other membership options:
 								</Text>
 								{memberships
-									.filter((m: any) => m.id !== currentSubscription.membershipId)
+									.filter((m: any) => {
+										// Filter out the currently subscribed plan
+										// Check both possible field names for membership ID
+										const currentMembershipId =
+											currentSubscription.membership?.id ||
+											currentSubscription.membershipId;
+										return m.id !== currentMembershipId;
+									})
 									.map((membership: any) => (
 										<View
 											key={membership.id}
@@ -428,33 +455,53 @@ const MemberSubscription = () => {
 												)}
 											{(() => {
 												const pendingRequest = getPendingRequest(membership.id);
-												const isExpired = pendingRequest && isRequestExpired(pendingRequest.expiresAt);
-												const timeRemaining = pendingRequest ? getTimeRemaining(pendingRequest.expiresAt) : 0;
+												const isExpired =
+													pendingRequest &&
+													isRequestExpired(pendingRequest.expiresAt);
+												const timeRemaining = pendingRequest
+													? getTimeRemaining(pendingRequest.expiresAt)
+													: 0;
 
-												if (pendingRequest && pendingRequest.status === 'PENDING' && !isExpired) {
+												if (
+													pendingRequest &&
+													pendingRequest.status === 'PENDING' &&
+													!isExpired
+												) {
 													return (
 														<View className='mt-2'>
 															<View className='bg-[#F9C513]/20 border border-[#F9C513]/30 rounded-xl p-3 mb-2'>
 																<View className='flex-row items-center justify-center mb-1'>
-																	<Ionicons name='time-outline' size={16} color='#F9C513' />
+																	<Ionicons
+																		name='time-outline'
+																		size={16}
+																		color='#F9C513'
+																	/>
 																	<Text className='text-[#F9C513] font-semibold ml-2'>
 																		Request Pending
 																	</Text>
 																</View>
 																<Text className='text-text-secondary text-xs text-center'>
-																	Expires in {timeRemaining}s - Waiting for admin approval
+																	Expires in {timeRemaining}s - Waiting for
+																	admin approval
 																</Text>
 															</View>
 														</View>
 													);
 												}
 
-												if (pendingRequest && (isExpired || pendingRequest.status === 'EXPIRED')) {
+												if (
+													pendingRequest &&
+													(isExpired || pendingRequest.status === 'EXPIRED')
+												) {
 													return (
 														<View className='mt-2'>
 															<View className='bg-red-500/20 border border-red-500/30 rounded-xl p-3 mb-2'>
 																<View className='flex-row items-center justify-center mb-1'>
-																	<Ionicons name='close-circle-outline' size={16} color='#EF4444' />
+																	<Ionicons
+																		name='close-circle-outline'
+																		size={16}
+																		color='#EF4444'
+																	/>
 																	<Text className='text-red-400 font-semibold ml-2'>
 																		Request Expired
 																	</Text>
@@ -473,12 +520,19 @@ const MemberSubscription = () => {
 													);
 												}
 
-												if (pendingRequest && pendingRequest.status === 'REJECTED') {
+												if (
+													pendingRequest &&
+													pendingRequest.status === 'REJECTED'
+												) {
 													return (
 														<View className='mt-2'>
 															<View className='bg-red-500/20 border border-red-500/30 rounded-xl p-3 mb-2'>
 																<View className='flex-row items-center justify-center mb-1'>
-																	<Ionicons name='close-circle-outline' size={16} color='#EF4444' />
+																	<Ionicons
+																		name='close-circle-outline'
+																		size={16}
+																		color='#EF4444'
+																	/>
 																	<Text className='text-red-400 font-semibold ml-2'>
 																		Request Rejected
 																	</Text>
@@ -594,33 +648,53 @@ const MemberSubscription = () => {
 
 									{(() => {
 										const pendingRequest = getPendingRequest(membership.id);
-										const isExpired = pendingRequest && isRequestExpired(pendingRequest.expiresAt);
-										const timeRemaining = pendingRequest ? getTimeRemaining(pendingRequest.expiresAt) : 0;
+										const isExpired =
+											pendingRequest &&
+											isRequestExpired(pendingRequest.expiresAt);
+										const timeRemaining = pendingRequest
+											? getTimeRemaining(pendingRequest.expiresAt)
+											: 0;
 
-										if (pendingRequest && pendingRequest.status === 'PENDING' && !isExpired) {
+										if (
+											pendingRequest &&
+											pendingRequest.status === 'PENDING' &&
+											!isExpired
+										) {
 											return (
 												<View className='mt-2'>
 													<View className='bg-[#F9C513]/20 border border-[#F9C513]/30 rounded-xl p-3 mb-2'>
 														<View className='flex-row items-center justify-center mb-1'>
-															<Ionicons name='time-outline' size={16} color='#F9C513' />
+															<Ionicons
+																name='time-outline'
+																size={16}
+																color='#F9C513'
+															/>
 															<Text className='text-[#F9C513] font-semibold ml-2'>
 																Request Pending
 															</Text>
 														</View>
 														<Text className='text-text-secondary text-xs text-center'>
-															Expires in {timeRemaining}s - Waiting for admin approval
+															Expires in {timeRemaining}s - Waiting for admin
+															approval
 														</Text>
 													</View>
 												</View>
 											);
 										}
 
-										if (pendingRequest && (isExpired || pendingRequest.status === 'EXPIRED')) {
+										if (
+											pendingRequest &&
+											(isExpired || pendingRequest.status === 'EXPIRED')
+										) {
 											return (
 												<View className='mt-2'>
 													<View className='bg-red-500/20 border border-red-500/30 rounded-xl p-3 mb-2'>
 														<View className='flex-row items-center justify-center mb-1'>
-															<Ionicons name='close-circle-outline' size={16} color='#EF4444' />
+															<Ionicons
+																name='close-circle-outline'
+																size={16}
+																color='#EF4444'
+															/>
 															<Text className='text-red-400 font-semibold ml-2'>
 																Request Expired
 															</Text>
@@ -639,12 +713,19 @@ const MemberSubscription = () => {
 											);
 										}
 
-										if (pendingRequest && pendingRequest.status === 'REJECTED') {
+										if (
+											pendingRequest &&
+											pendingRequest.status === 'REJECTED'
+										) {
 											return (
 												<View className='mt-2'>
 													<View className='bg-red-500/20 border border-red-500/30 rounded-xl p-3 mb-2'>
 														<View className='flex-row items-center justify-center mb-1'>
-															<Ionicons name='close-circle-outline' size={16} color='#EF4444' />
+															<Ionicons
+																name='close-circle-outline'
+																size={16}
+																color='#EF4444'
+															/>
 															<Text className='text-red-400 font-semibold ml-2'>
 																Request Rejected
 															</Text>
@@ -700,13 +781,19 @@ const MemberSubscription = () => {
 						</Text>
 						<View className='bg-[#F9C513]/20 border border-[#F9C513]/30 rounded-xl p-3 mb-4'>
 							<View className='flex-row items-center mb-2'>
-								<Ionicons name='information-circle-outline' size={20} color='#F9C513' />
+								<Ionicons
+									name='information-circle-outline'
+									size={20}
+									color='#F9C513'
+								/>
 								<Text className='text-[#F9C513] font-semibold ml-2'>
 									Request Process
 								</Text>
 							</View>
 							<Text className='text-text-secondary text-sm'>
-								Your request will be sent to the admin for approval. It will expire in 1 minute if not approved. You can resend the request if it expires.
+								Your request will be sent to the admin for approval. It will
+								expire in 1 minute if not approved. You can resend the request
+								if it expires.
 							</Text>
 						</View>
 						{selectedMembership && (
@@ -787,6 +874,112 @@ const MemberSubscription = () => {
 								</GradientButton>
 							</View>
 						</View>
+					</View>
+				</View>
+			</Modal>
+
+			{/* Refund Information Modal */}
+			<Modal
+				visible={showRefundInfoModal}
+				animationType='slide'
+				transparent={false}
+				onRequestClose={() => setShowRefundInfoModal(false)}
+			>
+				<View className='flex-1 bg-bg-darker justify-center px-5'>
+					<View className='bg-bg-primary rounded-2xl p-6 border-2 border-[#F9C513]/30'>
+						<View className='flex-row items-center justify-between mb-4 pb-4 border-b border-bg-darker/30'>
+							<View className='flex-row items-center'>
+								<View className='bg-[#F9C513]/20 rounded-full p-3 border-2 border-[#F9C513]/30 mr-3'>
+									<Ionicons
+										name='information-circle'
+										size={32}
+										color='#F9C513'
+									/>
+								</View>
+								<Text className='text-2xl font-bold text-text-primary'>
+									Refund Information
+								</Text>
+							</View>
+							<TouchableOpacity
+								onPress={() => setShowRefundInfoModal(false)}
+								className='bg-bg-darker rounded-full p-2'
+							>
+								<Ionicons name='close' size={24} color='#F9C513' />
+							</TouchableOpacity>
+						</View>
+
+						<View className='mb-4'>
+							<View className='bg-[#F9C513]/10 border border-[#F9C513]/30 rounded-xl p-4 mb-4'>
+								<View className='flex-row items-start mb-3'>
+									<Ionicons name='cash-outline' size={24} color='#F9C513' />
+									<View className='flex-1 ml-3'>
+										<Text className='text-[#F9C513] font-bold text-lg mb-2'>
+											Refund Policy
+										</Text>
+										<Text className='text-text-secondary text-sm leading-5'>
+											If you need a refund for your subscription and you haven't
+											used it yet, and it hasn't been long since you paid for
+											the subscription, you can go to the person in charge and
+											request a refund personally.
+										</Text>
+									</View>
+								</View>
+							</View>
+
+							<View className='bg-bg-darker/50 rounded-xl p-4 mb-4 border border-bg-darker/30'>
+								<Text className='text-text-primary font-semibold mb-3 flex-row items-center'>
+									<Ionicons
+										name='checkmark-circle-outline'
+										size={20}
+										color='#34C759'
+									/>
+									<Text className='ml-2'>Refund Eligibility:</Text>
+								</Text>
+								<View className='ml-7'>
+									<View className='flex-row items-start mb-2'>
+										<Text className='text-text-secondary text-sm'>• </Text>
+										<Text className='text-text-secondary text-sm flex-1'>
+											You haven't used the subscription yet
+										</Text>
+									</View>
+									<View className='flex-row items-start mb-2'>
+										<Text className='text-text-secondary text-sm'>• </Text>
+										<Text className='text-text-secondary text-sm flex-1'>
+											It hasn't been long since you paid for the subscription
+										</Text>
+									</View>
+									<View className='flex-row items-start'>
+										<Text className='text-text-secondary text-sm'>• </Text>
+										<Text className='text-text-secondary text-sm flex-1'>
+											You must request the refund personally from the admins
+										</Text>
+									</View>
+								</View>
+							</View>
+
+							<View className='bg-[#F9C513]/10 border border-[#F9C513]/30 rounded-xl p-4'>
+								<View className='flex-row items-start'>
+									<Ionicons name='people-outline' size={20} color='#F9C513' />
+									<View className='flex-1 ml-3'>
+										<Text className='text-[#F9C513] font-semibold mb-1'>
+											How to Request a Refund
+										</Text>
+										<Text className='text-text-secondary text-sm leading-5'>
+											Visit the gym in person and speak with the person in
+											charge to request your refund. Please bring your
+											subscription details and payment confirmation.
+										</Text>
+									</View>
+								</View>
+							</View>
+						</View>
+
+						<GradientButton
+							onPress={() => setShowRefundInfoModal(false)}
+							style={{ height: 56 }}
+						>
+							Got it
+						</GradientButton>
 					</View>
 				</View>
 			</Modal>

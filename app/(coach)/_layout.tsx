@@ -2,11 +2,15 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CoachLayout = () => {
 	const insets = useSafeAreaInsets();
-
+	const tabbarHeight =
+		Platform.OS === 'android'
+			? 75 + Math.max(insets.bottom, 12) - 8
+			: 60 + Math.max(insets.bottom, 12) - 8;
 	return (
 		<ProtectedRoute allowedRoles={['coach']}>
 			<Tabs
@@ -20,7 +24,7 @@ const CoachLayout = () => {
 						borderTopWidth: 1,
 						paddingTop: 8,
 						paddingBottom: Math.max(insets.bottom, 12),
-						height: 60 + Math.max(insets.bottom, 12) - 8,
+						height: tabbarHeight,
 					},
 					tabBarLabelStyle: {
 						fontSize: 12,

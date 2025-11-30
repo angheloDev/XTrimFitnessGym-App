@@ -9,7 +9,8 @@ import { convertGraphQLUser } from '@/utils/graphql-utils';
 import { useMutation } from '@apollo/client/react';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Linking, ScrollView, Text, View } from 'react-native';
+import { Alert, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 // Note: UpdateUserMutation types may need to be regenerated
 // Using any for now until GraphQL codegen is run
@@ -25,6 +26,7 @@ const Fourth = () => {
 	const [agreedToTermsAndConditions, setAgreedToTermsAndConditions] = useState(
 		data.agreedToTermsAndConditions || false
 	);
+	const [showTermsModal, setShowTermsModal] = useState(false);
 
 	const [updateUser, { loading }] = useMutation<
 		UpdateUserMutation,
@@ -87,11 +89,6 @@ const Fourth = () => {
 		}
 	};
 
-	const openLink = (url: string) => {
-		Linking.openURL(url).catch((err) =>
-			console.error('Failed to open link:', err)
-		);
-	};
 
 	return (
 		<FixedView className='flex-1 bg-bg-darker'>
@@ -114,9 +111,7 @@ const Fourth = () => {
 								I agree to the{' '}
 								<Text
 									className='text-[#F9C513] underline'
-									onPress={() =>
-										!loading && openLink('https://example.com/terms')
-									}
+									onPress={() => !loading && setShowTermsModal(true)}
 								>
 									Terms and Conditions
 								</Text>
@@ -147,6 +142,157 @@ const Fourth = () => {
 					</View>
 				</View>
 			</ScrollView>
+
+			{/* Terms and Conditions Modal */}
+			<Modal
+				visible={showTermsModal}
+				animationType='slide'
+				transparent={false}
+				onRequestClose={() => setShowTermsModal(false)}
+			>
+				<View className='flex-1 bg-bg-darker'>
+					{/* Header */}
+					<View className='bg-bg-primary border-b border-bg-darker/30 px-5 py-4 flex-row items-center justify-between'>
+						<View className='flex-row items-center'>
+							<View className='bg-[#F9C513]/20 rounded-full p-2 border-2 border-[#F9C513]/30 mr-3'>
+								<Ionicons name='document-text' size={24} color='#F9C513' />
+							</View>
+							<Text className='text-2xl font-bold text-text-primary'>
+								Terms & Conditions
+							</Text>
+						</View>
+						<TouchableOpacity
+							onPress={() => setShowTermsModal(false)}
+							className='bg-bg-darker rounded-full p-2'
+						>
+							<Ionicons name='close' size={24} color='#F9C513' />
+						</TouchableOpacity>
+					</View>
+
+					{/* Content */}
+					<ScrollView
+						className='flex-1'
+						contentContainerClassName='p-5'
+						showsVerticalScrollIndicator={true}
+					>
+						<View>
+							{/* 1. Membership Eligibility */}
+							<View className='bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20 mb-6'>
+								<Text className='text-[#F9C513] font-bold text-lg mb-2'>
+									1. Membership Eligibility
+								</Text>
+								<Text className='text-text-secondary text-sm leading-5'>
+									Participants must be 18 years old and above. Anyone below 18 must present{' '}
+									<Text className='font-semibold text-text-primary'>
+										written parental or guardian consent
+									</Text>{' '}
+									before using the facilities.
+								</Text>
+							</View>
+
+							{/* 2. Health and Safety */}
+							<View className='bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20 mb-6'>
+								<Text className='text-[#F9C513] font-bold text-lg mb-2'>
+									2. Health and Safety
+								</Text>
+								<Text className='text-text-secondary text-sm leading-5'>
+									Members must ensure they are physically fit before joining any gym activity. The gym is not responsible for injuries resulting from improper equipment use or failure to follow instructions.
+								</Text>
+							</View>
+
+							{/* 3. Conduct and Behavior */}
+							<View className='bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20 mb-6'>
+								<Text className='text-[#F9C513] font-bold text-lg mb-2'>
+									3. Conduct and Behavior
+								</Text>
+								<Text className='text-text-secondary text-sm leading-5'>
+									Members must behave respectfully toward staff and other users. Harassment, threats, or destructive behavior may result in suspension or termination of membership.
+								</Text>
+							</View>
+
+							{/* 4. Equipment Use */}
+							<View className='bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20 mb-6'>
+								<Text className='text-[#F9C513] font-bold text-lg mb-2'>
+									4. Equipment Use
+								</Text>
+								<Text className='text-text-secondary text-sm leading-5'>
+									All equipment must be used properly and returned after use. Members must report any damaged or malfunctioning equipment.
+								</Text>
+							</View>
+
+							{/* 5. Personal Belongings */}
+							<View className='bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20 mb-6'>
+								<Text className='text-[#F9C513] font-bold text-lg mb-2'>
+									5. Personal Belongings
+								</Text>
+								<Text className='text-text-secondary text-sm leading-5'>
+									The gym is not liable for lost, stolen, or damaged personal items. Members are encouraged to use lockers for safekeeping.
+								</Text>
+							</View>
+
+							{/* 6. Cleanliness and Hygiene */}
+							<View className='bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20 mb-6'>
+								<Text className='text-[#F9C513] font-bold text-lg mb-2'>
+									6. Cleanliness and Hygiene
+								</Text>
+								<Text className='text-text-secondary text-sm leading-5'>
+									Members must wipe down equipment after use and dispose of trash properly. Proper gym attire and footwear are required.
+								</Text>
+							</View>
+
+							{/* 7. Payments and Membership */}
+							<View className='bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20 mb-6'>
+								<Text className='text-[#F9C513] font-bold text-lg mb-2'>
+									7. Payments and Membership
+								</Text>
+								<Text className='text-text-secondary text-sm leading-5'>
+									All membership fees are non-refundable unless otherwise stated. Failure to settle payments may result in restricted access or account freeze.
+								</Text>
+							</View>
+
+							{/* 8. Class and Facility Rules */}
+							<View className='bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20 mb-6'>
+								<Text className='text-[#F9C513] font-bold text-lg mb-2'>
+									8. Class and Facility Rules
+								</Text>
+								<Text className='text-text-secondary text-sm leading-5'>
+									Members must follow schedules, class rules, and staff instructions to ensure safety and order.
+								</Text>
+							</View>
+
+							{/* 9. Liability Waiver */}
+							<View className='bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20 mb-6'>
+								<Text className='text-[#F9C513] font-bold text-lg mb-2'>
+									9. Liability Waiver
+								</Text>
+								<Text className='text-text-secondary text-sm leading-5'>
+									By accessing the gym, members acknowledge that physical activity carries risks and agree that the gym is not liable for injuries or health issues that occur while using the facility.
+								</Text>
+							</View>
+
+							{/* 10. Changes to Terms */}
+							<View className='bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20 mb-4'>
+								<Text className='text-[#F9C513] font-bold text-lg mb-2'>
+									10. Changes to Terms
+								</Text>
+								<Text className='text-text-secondary text-sm leading-5'>
+									The gym reserves the right to modify these Terms and Conditions at any time. Members will be informed of significant updates.
+								</Text>
+							</View>
+						</View>
+					</ScrollView>
+
+					{/* Footer */}
+					<View className='bg-bg-primary border-t border-bg-darker/30 px-5 py-4'>
+						<GradientButton
+							onPress={() => setShowTermsModal(false)}
+							style={{ height: 56 }}
+						>
+							I Understand
+						</GradientButton>
+					</View>
+				</View>
+			</Modal>
 		</FixedView>
 	);
 };
