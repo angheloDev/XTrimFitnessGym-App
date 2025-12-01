@@ -23,18 +23,18 @@ const getApiUrl = () => {
 		// Platform-specific URLs
 		if (Platform.OS === 'android') {
 			// Android Emulator uses 10.0.2.2 to access host machine's localhost
-			const apiUrl = 'http://10.0.2.2:8080/graphql';
+			const apiUrl = 'http://10.0.2.2:8000/graphql';
 			console.log('✅ Using Android emulator API URL:', apiUrl);
 			return apiUrl;
 		} else if (Platform.OS === 'ios') {
 			// iOS Simulator can use localhost
-			const apiUrl = 'http://localhost:8080/graphql';
+			const apiUrl = 'http://localhost:8000/graphql';
 			console.log('✅ Using iOS simulator API URL:', apiUrl);
 			return apiUrl;
 		} else {
 			// For physical devices, user should set this in app.json
 			// Default fallback - UPDATE THIS WITH YOUR COMPUTER'S IP ADDRESS
-			const apiUrl = 'http://192.168.1.71:8080/graphql'; // ⚠️ UPDATE THIS!
+			const apiUrl = 'http://192.168.1.71:8000/graphql'; // ⚠️ UPDATE THIS!
 			console.warn(
 				'⚠️ Physical device detected. Please update the API URL in app.json (extra.apiUrl) with your computer IP'
 			);

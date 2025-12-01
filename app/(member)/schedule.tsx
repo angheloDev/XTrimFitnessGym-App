@@ -36,11 +36,11 @@ const getApiUrl = () => {
 			return apiUrl.replace('/graphql', '');
 		}
 		if (Platform.OS === 'android') {
-			return 'http://10.0.2.2:8080';
+			return 'http://10.0.2.2:8000';
 		} else if (Platform.OS === 'ios') {
-			return 'http://localhost:8080';
+			return 'http://localhost:8000';
 		}
-		return 'http://192.168.1.71:8080';
+		return 'http://192.168.1.71:8000';
 	}
 	return 'https://your-production-api.com';
 };

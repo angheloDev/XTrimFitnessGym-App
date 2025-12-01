@@ -3,8 +3,8 @@ import type { CodegenConfig } from '@graphql-codegen/cli';
 // Get API URL from environment variable or use default
 // You can set API_URL environment variable or it will use localhost
 // For production/CI, you might want to use: API_URL=http://your-api-url/graphql npm run generate
-const apiUrl = process.env.API_URL ?? 'http://localhost:8080/graphql';
-// const apiUrl = process.env.API_URL || 'http://localhost:8080/graphql';
+const apiUrl = process.env.API_URL ?? 'http://localhost:8000/graphql';
+// const apiUrl = process.env.API_URL || 'http://localhost:8000/graphql';
 
 const config: CodegenConfig = {
 	// Schema source: Fetch from running API server via introspection
