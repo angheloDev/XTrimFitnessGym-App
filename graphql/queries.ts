@@ -332,13 +332,135 @@ export const GET_SESSION_LOGS_QUERY = gql`
 			session {
 				id
 				name
+				workoutType
 				date
+				startTime
+				endTime
+				gymArea
+				note
+				status
+				coach {
+					id
+					firstName
+					lastName
+					email
+				}
+				clients {
+					id
+					firstName
+					lastName
+					email
+				}
+				goal {
+					id
+					title
+					goalType
+				}
+				createdAt
+			}
+			clientId
+			client {
+				id
+				firstName
+				lastName
+				email
+			}
+			coachId
+			coach {
+				id
+				firstName
+				lastName
+				email
 			}
 			weight
+			progressImages {
+				front
+				rightSide
+				leftSide
+				back
+			}
 			clientConfirmed
 			coachConfirmed
 			notes
 			completedAt
+			createdAt
+			updatedAt
+		}
+	}
+`;
+
+export const GET_COACH_SESSION_LOGS_QUERY = gql`
+	query GetCoachSessionLogs($coachId: ID!) {
+		getCoachSessionLogs(coachId: $coachId) {
+			id
+			sessionId
+			session {
+				id
+				name
+				date
+				startTime
+				endTime
+				gymArea
+				goalId
+				goal {
+					id
+					title
+					goalType
+				}
+			}
+			clientId
+			client {
+				id
+				firstName
+				lastName
+				email
+			}
+			weight
+			progressImages {
+				front
+				rightSide
+				leftSide
+				back
+			}
+			clientConfirmed
+			coachConfirmed
+			notes
+			completedAt
+			createdAt
+		}
+	}
+`;
+
+export const GET_SESSION_LOG_BY_SESSION_ID_QUERY = gql`
+	query GetSessionLogBySessionId($sessionId: ID!) {
+		getSessionLogBySessionId(sessionId: $sessionId) {
+			id
+			sessionId
+			session {
+				id
+				name
+				date
+				startTime
+			}
+			clientId
+			client {
+				id
+				firstName
+				lastName
+				email
+			}
+			weight
+			progressImages {
+				front
+				rightSide
+				leftSide
+				back
+			}
+			clientConfirmed
+			coachConfirmed
+			notes
+			completedAt
+			createdAt
 		}
 	}
 `;
@@ -441,6 +563,108 @@ export const GET_COACH_REQUESTS_QUERY = gql`
 			}
 			status
 			message
+			createdAt
+			updatedAt
+		}
+	}
+`;
+
+export const GET_SESSION_LOGS_FOR_RATING_QUERY = gql`
+	query GetSessionLogsForRating(
+		$clientId: ID!
+		$goalId: ID!
+		$startDate: String!
+		$endDate: String!
+	) {
+		getSessionLogsForRating(
+			clientId: $clientId
+			goalId: $goalId
+			startDate: $startDate
+			endDate: $endDate
+		) {
+			id
+			sessionId
+			session {
+				id
+				name
+				date
+				startTime
+				endTime
+				gymArea
+				goalId
+				goal {
+					id
+					title
+					goalType
+				}
+			}
+			clientId
+			client {
+				id
+				firstName
+				lastName
+				email
+			}
+			weight
+			progressImages {
+				front
+				rightSide
+				leftSide
+				back
+			}
+			completedAt
+		}
+	}
+`;
+
+export const GET_PROGRESS_RATINGS_QUERY = gql`
+	query GetProgressRatings($clientId: ID!, $goalId: ID!) {
+		getProgressRatings(clientId: $clientId, goalId: $goalId) {
+			id
+			coachId
+			coach {
+				id
+				firstName
+				lastName
+			}
+			clientId
+			client {
+				id
+				firstName
+				lastName
+			}
+			goalId
+			goal {
+				id
+				title
+				goalType
+			}
+			startDate
+			endDate
+			rating
+			comment
+			verdict
+			sessionLogIds
+			createdAt
+			updatedAt
+		}
+	}
+`;
+
+export const GET_COACH_RATINGS_QUERY = gql`
+	query GetCoachRatings($coachId: ID!) {
+		getCoachRatings(coachId: $coachId) {
+			id
+			coachId
+			clientId
+			client {
+				id
+				firstName
+				lastName
+			}
+			sessionLogId
+			rating
+			comment
 			createdAt
 			updatedAt
 		}

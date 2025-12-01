@@ -348,11 +348,15 @@ const MemberCoaches = () => {
 						</Text>
 					</View>
 					<View className='flex-1'>
-						<View className='flex-row items-center justify-between mb-1'>
-							<Text className='text-text-primary font-semibold text-lg'>
+						<View className='flex-row items-start justify-between mb-1'>
+							<Text 
+								className='text-text-primary font-semibold text-lg flex-1 mr-2'
+								numberOfLines={1}
+								ellipsizeMode='tail'
+							>
 								Coach {item.firstName} {item.lastName}
 							</Text>
-							<View className='flex-row items-center gap-2'>
+							<View className='flex-row items-center gap-2 flex-shrink-0'>
 								{isCurrentCoach && (
 									<View className='bg-green-500/20 px-2 py-1 rounded border border-green-500/40'>
 										<Text className='text-green-500 text-xs font-semibold'>

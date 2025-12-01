@@ -17,11 +17,14 @@ import {
 	GET_COACH_SESSIONS_QUERY,
 	GET_SESSION_TEMPLATES_QUERY,
 	GET_USERS_QUERY,
+	GET_SESSION_LOG_BY_SESSION_ID_QUERY,
+	GET_COACH_SESSION_LOGS_QUERY,
 } from '@/graphql/queries';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState, useEffect, useMemo } from 'react';
 import { formatTimeTo12Hour } from '@/utils/time-utils';
+import { useRouter } from 'expo-router';
 import {
 	Alert,
 	FlatList,
@@ -31,6 +34,8 @@ import {
 	Text,
 	TouchableOpacity,
 	View,
+	Image,
+	Dimensions,
 } from 'react-native';
 
 const gymAreas = [
@@ -43,6 +48,7 @@ const gymAreas = [
 
 const CoachSchedule = () => {
 	const { user } = useAuth();
+	const router = useRouter();
 	const [refreshing, setRefreshing] = useState(false);
 	const [showCreateModal, setShowCreateModal] = useState(false);
 	const [showGoalsModal, setShowGoalsModal] = useState(false);
@@ -59,6 +65,8 @@ const CoachSchedule = () => {
 	const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
 	const [errors, setErrors] = useState<Record<string, string>>({});
 	const [templatesExpanded, setTemplatesExpanded] = useState(false);
+	const [showProgressImagesModal, setShowProgressImagesModal] = useState(false);
+	const [selectedSessionForProgress, setSelectedSessionForProgress] = useState<any>(null);
 
 	const { data: sessionsData, refetch } = useQuery(GET_COACH_SESSIONS_QUERY, {
 		variables: { coachId: user?.id },
@@ -88,6 +96,41 @@ const CoachSchedule = () => {
 		variables: { role: 'member' },
 		fetchPolicy: 'cache-and-network',
 	});
+
+	const { data: sessionLogData, refetch: refetchSessionLog } = useQuery(
+		GET_SESSION_LOG_BY_SESSION_ID_QUERY,
+		{
+			variables: { sessionId: selectedSessionForProgress?.id || '' },
+			fetchPolicy: 'cache-and-network',
+			skip: !selectedSessionForProgress?.id || !showProgressImagesModal,
+		}
+	);
+
+	// Query all session logs to check which sessions have progress images
+	const { data: allSessionLogsData } = useQuery(GET_COACH_SESSION_LOGS_QUERY, {
+		variables: { coachId: user?.id || '' },
+		fetchPolicy: 'cache-and-network',
+		skip: !user?.id,
+	});
+
+	// Create a Set of session IDs that have progress images
+	const sessionsWithProgressImages = useMemo(() => {
+		const sessionIds = new Set<string>();
+		if (allSessionLogsData?.getCoachSessionLogs) {
+			(allSessionLogsData.getCoachSessionLogs as any[]).forEach((log: any) => {
+				if (
+					log.progressImages &&
+					(log.progressImages.front ||
+						log.progressImages.rightSide ||
+						log.progressImages.leftSide ||
+						log.progressImages.back)
+				) {
+					sessionIds.add(log.sessionId);
+				}
+			});
+		}
+		return sessionIds;
+	}, [allSessionLogsData]);
 
 	const allClients = useMemo(() => {
 		if (!clientsData?.getUsers) {
@@ -473,9 +516,20 @@ const CoachSchedule = () => {
 				)}
 
 				<View className='mb-4'>
-					<Text className='text-xl font-semibold text-text-primary mb-4'>
-						Upcoming Sessions
-					</Text>
+					<View className='flex-row justify-between items-center mb-4'>
+						<Text className='text-xl font-semibold text-text-primary'>
+							Upcoming Sessions
+						</Text>
+						<TouchableOpacity
+							onPress={() => router.push('/(coach)/completed-sessions')}
+							className='flex-row items-center'
+						>
+							<Ionicons name='checkmark-circle' size={20} color='#F9C513' />
+							<Text className='text-[#F9C513] font-semibold ml-2'>
+								Completed Sessions
+							</Text>
+						</TouchableOpacity>
+					</View>
 					{sessions.filter((s: any) => !s.isTemplate && s.status !== 'cancelled').length === 0 ? (
 						<View className='bg-bg-primary rounded-xl p-6 items-center border border-[#F9C513]' style={{ borderWidth: 0.5 }}>
 							<Ionicons name='calendar-outline' size={48} color='#8E8E93' />
@@ -517,28 +571,42 @@ const CoachSchedule = () => {
 											</Text>
 										)}
 									</View>
-									<TouchableOpacity
-										onPress={() => {
-											Alert.alert(
-												'Cancel Session',
-												'Are you sure you want to cancel this session?',
-												[
-													{ text: 'No', style: 'cancel' },
-													{
-														text: 'Yes',
-														style: 'destructive',
-														onPress: () =>
-															cancelSession({
-																variables: { id: item.id },
-															}),
-													},
-												]
-											);
-										}}
-										className='p-2'
-									>
-										<Ionicons name='close-circle' size={24} color='#FF3B30' />
-									</TouchableOpacity>
+									<View className='flex-row items-center gap-2'>
+										{new Date(item.date) <= new Date() &&
+											sessionsWithProgressImages.has(item.id) && (
+												<TouchableOpacity
+													onPress={() => {
+														setSelectedSessionForProgress(item);
+														setShowProgressImagesModal(true);
+													}}
+													className='p-2'
+												>
+													<Ionicons name='images' size={24} color='#F9C513' />
+												</TouchableOpacity>
+											)}
+										<TouchableOpacity
+											onPress={() => {
+												Alert.alert(
+													'Cancel Session',
+													'Are you sure you want to cancel this session?',
+													[
+														{ text: 'No', style: 'cancel' },
+														{
+															text: 'Yes',
+															style: 'destructive',
+															onPress: () =>
+																cancelSession({
+																	variables: { id: item.id },
+																}),
+														},
+													]
+												);
+											}}
+											className='p-2'
+										>
+											<Ionicons name='close-circle' size={24} color='#FF3B30' />
+										</TouchableOpacity>
+									</View>
 								</View>
 							)}
 						/>
@@ -877,6 +945,22 @@ const CoachSchedule = () => {
 								</>
 							) : (
 								<>
+									{/* Save as reusable template button - moved to top */}
+									{!isTemplate && (
+										<TouchableOpacity
+											onPress={() => setIsTemplate(true)}
+											className='mb-4 p-3 bg-bg-darker rounded-lg border border-[#F9C513]'
+											style={{ borderWidth: 0.5 }}
+										>
+											<View className='flex-row items-center'>
+												<Ionicons name='copy' size={20} color='#F9C513' />
+												<Text className='text-text-primary ml-2'>
+													Save as reusable template
+												</Text>
+											</View>
+										</TouchableOpacity>
+									)}
+
 									{!isTemplate && (
 										<View className='mb-4'>
 											<Text className='text-text-primary font-semibold mb-2'>
@@ -1033,20 +1117,6 @@ const CoachSchedule = () => {
 										numberOfLines={3}
 									/>
 
-									{!isTemplate && (
-										<TouchableOpacity
-											onPress={() => setIsTemplate(true)}
-											className='mb-4 p-3 bg-bg-darker rounded-lg'
-										>
-											<View className='flex-row items-center'>
-												<Ionicons name='copy' size={20} color='#F9C513' />
-												<Text className='text-text-primary ml-2'>
-													Save as reusable template
-												</Text>
-											</View>
-										</TouchableOpacity>
-									)}
-
 									<GradientButton
 										onPress={handleCreateSession}
 										loading={creating}
@@ -1055,6 +1125,161 @@ const CoachSchedule = () => {
 										{isTemplate ? 'Create Template' : 'Create Session'}
 									</GradientButton>
 								</>
+							)}
+						</ScrollView>
+					</View>
+				</View>
+			</Modal>
+
+			{/* Progress Images Modal */}
+			<Modal
+				visible={showProgressImagesModal}
+				animationType='slide'
+				transparent
+				onRequestClose={() => {
+					setShowProgressImagesModal(false);
+					setSelectedSessionForProgress(null);
+				}}
+			>
+				<View className='flex-1 bg-bg-darker justify-end'>
+					<View
+						className='bg-bg-primary rounded-t-3xl p-6 max-h-[90%] border-t border-[#F9C513]'
+						style={{ borderTopWidth: 0.5 }}
+					>
+						<ScrollView showsVerticalScrollIndicator={false}>
+							<View className='flex-row justify-between items-center mb-6'>
+								<View className='flex-1'>
+									<Text className='text-2xl font-bold text-text-primary'>
+										Progress Photos
+									</Text>
+									{selectedSessionForProgress && (
+										<Text className='text-text-secondary text-sm mt-1'>
+											{selectedSessionForProgress.name} -{' '}
+											{formatDate(selectedSessionForProgress.date)}
+										</Text>
+									)}
+								</View>
+								<TouchableOpacity
+									onPress={() => {
+										setShowProgressImagesModal(false);
+										setSelectedSessionForProgress(null);
+									}}
+								>
+									<Ionicons name='close' size={28} color='#8E8E93' />
+								</TouchableOpacity>
+							</View>
+
+							{sessionLogData?.getSessionLogBySessionId ? (
+								<View>
+									{sessionLogData.getSessionLogBySessionId.progressImages ? (
+										<View>
+											{sessionLogData.getSessionLogBySessionId.progressImages.front && (
+												<View className='mb-4'>
+													<Text className='text-text-primary font-semibold mb-2'>
+														Front
+													</Text>
+													<Image
+														source={{
+															uri: sessionLogData.getSessionLogBySessionId.progressImages.front,
+														}}
+														style={{
+															width: '100%',
+															height: Dimensions.get('window').width * 0.8,
+															borderRadius: 12,
+															borderWidth: 0.5,
+															borderColor: '#F9C513',
+														}}
+														resizeMode='cover'
+													/>
+												</View>
+											)}
+											{sessionLogData.getSessionLogBySessionId.progressImages.rightSide && (
+												<View className='mb-4'>
+													<Text className='text-text-primary font-semibold mb-2'>
+														Right Side
+													</Text>
+													<Image
+														source={{
+															uri: sessionLogData.getSessionLogBySessionId.progressImages.rightSide,
+														}}
+														style={{
+															width: '100%',
+															height: Dimensions.get('window').width * 0.8,
+															borderRadius: 12,
+															borderWidth: 0.5,
+															borderColor: '#F9C513',
+														}}
+														resizeMode='cover'
+													/>
+												</View>
+											)}
+											{sessionLogData.getSessionLogBySessionId.progressImages.leftSide && (
+												<View className='mb-4'>
+													<Text className='text-text-primary font-semibold mb-2'>
+														Left Side
+													</Text>
+													<Image
+														source={{
+															uri: sessionLogData.getSessionLogBySessionId.progressImages.leftSide,
+														}}
+														style={{
+															width: '100%',
+															height: Dimensions.get('window').width * 0.8,
+															borderRadius: 12,
+															borderWidth: 0.5,
+															borderColor: '#F9C513',
+														}}
+														resizeMode='cover'
+													/>
+												</View>
+											)}
+											{sessionLogData.getSessionLogBySessionId.progressImages.back && (
+												<View className='mb-4'>
+													<Text className='text-text-primary font-semibold mb-2'>
+														Back
+													</Text>
+													<Image
+														source={{
+															uri: sessionLogData.getSessionLogBySessionId.progressImages.back,
+														}}
+														style={{
+															width: '100%',
+															height: Dimensions.get('window').width * 0.8,
+															borderRadius: 12,
+															borderWidth: 0.5,
+															borderColor: '#F9C513',
+														}}
+														resizeMode='cover'
+													/>
+												</View>
+											)}
+											{sessionLogData.getSessionLogBySessionId.weight && (
+												<View className='mb-4 p-4 bg-bg-darker rounded-xl border border-[#F9C513]' style={{ borderWidth: 0.5 }}>
+													<Text className='text-text-primary font-semibold mb-1'>
+														Weight
+													</Text>
+													<Text className='text-text-secondary text-lg'>
+														{sessionLogData.getSessionLogBySessionId.weight} kg
+													</Text>
+												</View>
+											)}
+										</View>
+									) : (
+										<View className='items-center py-10'>
+											<Ionicons name='images-outline' size={64} color='#8E8E93' />
+											<Text className='text-text-secondary mt-4 text-center'>
+												No progress photos available yet
+											</Text>
+											<Text className='text-text-secondary text-sm mt-2 text-center'>
+												The client hasn't completed this session yet
+											</Text>
+										</View>
+									)}
+								</View>
+							) : (
+								<View className='items-center py-10'>
+									<Text className='text-text-secondary'>Loading...</Text>
+								</View>
 							)}
 						</ScrollView>
 					</View>

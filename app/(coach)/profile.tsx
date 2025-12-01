@@ -7,14 +7,22 @@ import TabHeader from '@/components/TabHeader';
 import TimePicker from '@/components/TimePicker';
 import { useAuth } from '@/contexts/AuthContext';
 import { UPDATE_USER_MUTATION } from '@/graphql/mutations';
+import { GET_COACH_RATINGS_QUERY } from '@/graphql/queries';
 import { useAppDispatch } from '@/store/hooks';
 import { setUser } from '@/store/slices/userSlice';
 import { convertGraphQLUser } from '@/utils/graphql-utils';
 import { formatTimeRangeTo12Hour } from '@/utils/time-utils';
-import { useMutation } from '@apollo/client/react';
+import { useMutation, useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+	Alert,
+	Modal,
+	ScrollView,
+	Text,
+	TouchableOpacity,
+	View,
+} from 'react-native';
 
 // Note: UpdateUserMutation types may need to be regenerated
 // Using any for now until GraphQL codegen is run
@@ -53,6 +61,17 @@ const CoachProfile = () => {
 	const dispatch = useAppDispatch();
 	const [isEditing, setIsEditing] = useState(false);
 	const [isEditingCredentials, setIsEditingCredentials] = useState(false);
+	const [showRatingsModal, setShowRatingsModal] = useState(false);
+
+	// Query coach ratings
+	const { data: ratingsData, refetch: refetchRatings } = useQuery<any>(
+		GET_COACH_RATINGS_QUERY,
+		{
+			variables: { coachId: user?.id || '' },
+			skip: !user?.id || !showRatingsModal,
+			fetchPolicy: 'cache-and-network',
+		}
+	);
 
 	const [firstName, setFirstName] = useState(user?.firstName || '');
 	const [middleName, setMiddleName] = useState(user?.middleName || '');
@@ -383,7 +402,7 @@ const CoachProfile = () => {
 						</Text>
 					</View>
 					<Text className='text-2xl font-bold text-text-primary'>
-						{`Coach ${(firstName || user?.firstName || '')} ${(lastName || user?.lastName || '')}`.trim()}
+						{`Coach ${firstName || user?.firstName || ''} ${lastName || user?.lastName || ''}`.trim()}
 					</Text>
 					<Text className='text-text-secondary mt-1'>
 						{email || user?.email || ''}
@@ -822,21 +841,141 @@ const CoachProfile = () => {
 											</Text>
 										</View>
 									)}
-								{user.coachDetails.ratings && (
-									<View>
-										<Text className='text-text-secondary text-sm mb-1'>
-											Rating
-										</Text>
+								<View className='mb-4'>
+									<Text className='text-text-secondary text-sm mb-1'>
+										Average Rating
+									</Text>
+									<View className='flex-row items-center justify-between'>
 										<Text className='text-text-primary font-medium'>
-											{String(user.coachDetails.ratings.toFixed(1))} / 5.0
+											{typeof user?.coachDetails?.ratings === 'number'
+												? `${user.coachDetails.ratings.toFixed(1)} / 5.0`
+												: '0.0 / 5.0'}
 										</Text>
+										<TouchableOpacity
+											onPress={() => {
+												setShowRatingsModal(true);
+												refetchRatings();
+											}}
+											className='flex-row items-center bg-[#F9C513]/20 px-3 py-2 rounded-lg border border-[#F9C513]/30'
+										>
+											<Ionicons name='star' size={16} color='#F9C513' />
+											<Text className='text-[#F9C513] font-semibold ml-2'>
+												View All Ratings
+											</Text>
+										</TouchableOpacity>
 									</View>
-								)}
+								</View>
 							</View>
 						)}
 					</>
 				)}
 			</ScrollView>
+
+			{/* Ratings Modal */}
+			<Modal
+				visible={showRatingsModal}
+				animationType='slide'
+				transparent={false}
+				onRequestClose={() => setShowRatingsModal(false)}
+			>
+				<View className='flex-1 bg-bg-darker px-5 py-8'>
+					<View
+						className='bg-bg-primary rounded-2xl p-6 flex-1 border border-[#F9C513]'
+						style={{ borderWidth: 0.5 }}
+					>
+						<View className='flex-row justify-between items-center mb-4 pb-4 border-b border-bg-darker/30'>
+							<View className='flex-1'>
+								<Text className='text-2xl font-bold text-text-primary'>
+									My Ratings
+								</Text>
+								{ratingsData?.getCoachRatings && (
+									<Text className='text-text-secondary text-sm mt-1'>
+										{ratingsData.getCoachRatings.length} rating
+										{ratingsData.getCoachRatings.length !== 1 ? 's' : ''} •{' '}
+										{
+											ratingsData.getCoachRatings.filter((r: any) => r.comment)
+												.length
+										}{' '}
+										with comments
+									</Text>
+								)}
+							</View>
+							<TouchableOpacity
+								onPress={() => setShowRatingsModal(false)}
+								className='p-2'
+							>
+								<Ionicons name='close' size={28} color='#8E8E93' />
+							</TouchableOpacity>
+						</View>
+
+						<ScrollView className='flex-1' showsVerticalScrollIndicator={true}>
+							{ratingsData?.getCoachRatings &&
+							ratingsData.getCoachRatings.length > 0 ? (
+								ratingsData.getCoachRatings.map((rating: any) => (
+									<View
+										key={rating.id}
+										className='bg-bg-darker rounded-xl p-4 mb-3 border border-[#F9C513]'
+										style={{ borderWidth: 0.5 }}
+									>
+										<View className='flex-row justify-between items-start mb-2'>
+											<View className='flex-1'>
+												{rating.client && (
+													<Text className='text-text-primary font-semibold text-base mb-1'>
+														{rating.client.firstName} {rating.client.lastName}
+													</Text>
+												)}
+												<Text className='text-text-secondary text-xs'>
+													{new Date(rating.createdAt).toLocaleDateString(
+														'en-US',
+														{
+															year: 'numeric',
+															month: 'long',
+															day: 'numeric',
+														}
+													)}
+												</Text>
+											</View>
+											<View className='flex-row items-center'>
+												{Array.from({ length: 5 }).map((_, index) => (
+													<Ionicons
+														key={index}
+														name={
+															index < rating.rating ? 'star' : 'star-outline'
+														}
+														size={20}
+														color='#F9C513'
+													/>
+												))}
+											</View>
+										</View>
+
+										{rating.comment && (
+											<View className='mt-3 pt-3 border-t border-[#F9C513]/20'>
+												<Text className='text-text-secondary text-xs mb-1'>
+													Comment:
+												</Text>
+												<Text className='text-text-primary text-sm'>
+													{rating.comment}
+												</Text>
+											</View>
+										)}
+									</View>
+								))
+							) : (
+								<View className='items-center justify-center py-12'>
+									<Ionicons name='star-outline' size={48} color='#8E8E93' />
+									<Text className='text-text-secondary mt-4 text-center text-base'>
+										No ratings yet
+									</Text>
+									<Text className='text-text-secondary mt-2 text-center text-sm'>
+										Your clients have not rated you yet
+									</Text>
+								</View>
+							)}
+						</ScrollView>
+					</View>
+				</View>
+			</Modal>
 		</FixedView>
 	);
 };

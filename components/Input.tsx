@@ -1,5 +1,6 @@
-import React from 'react';
-import { TextInput, TextInputProps, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { TextInput, TextInputProps, Text, View, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 interface InputProps extends TextInputProps {
 	label?: string;
@@ -12,8 +13,12 @@ const Input: React.FC<InputProps> = ({
 	error,
 	containerClassName = '',
 	className = '',
+	secureTextEntry,
 	...props
 }) => {
+	const [showPassword, setShowPassword] = useState(false);
+	const isPasswordField = secureTextEntry;
+
 	return (
 		<View className={`mb-4 ${containerClassName}`}>
 			{label && (
@@ -21,13 +26,31 @@ const Input: React.FC<InputProps> = ({
 					{label}
 				</Text>
 			)}
-			<TextInput
-				className={`border ${
-					error ? 'border-red-500' : 'border-input'
-				} rounded-lg p-4 text-base bg-input text-text-primary ${className}`}
-				placeholderTextColor='#6c757d'
-				{...props}
-			/>
+			<View className='relative'>
+				<TextInput
+					className={`border ${
+						error ? 'border-red-500' : 'border-input'
+					} rounded-lg p-4 text-base bg-input text-text-primary ${
+						isPasswordField ? 'pr-12' : ''
+					} ${className}`}
+					placeholderTextColor='#6c757d'
+					secureTextEntry={isPasswordField && !showPassword}
+					{...props}
+				/>
+				{isPasswordField && (
+					<TouchableOpacity
+						onPress={() => setShowPassword(!showPassword)}
+						className='absolute right-4 top-0 bottom-0 justify-center'
+						activeOpacity={0.7}
+					>
+						<Ionicons
+							name={showPassword ? 'eye-off' : 'eye'}
+							size={20}
+							color='#8E8E93'
+						/>
+					</TouchableOpacity>
+				)}
+			</View>
 			{error && (
 				<Text className='text-red-500 text-sm mt-1'>{error}</Text>
 			)}

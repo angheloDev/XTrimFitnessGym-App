@@ -192,10 +192,30 @@ export const COMPLETE_SESSION_MUTATION = gql`
 			clientId
 			coachId
 			weight
+			progressImages {
+				front
+				rightSide
+				leftSide
+				back
+			}
 			clientConfirmed
 			coachConfirmed
 			notes
 			completedAt
+		}
+	}
+`;
+
+export const CREATE_COACH_RATING_MUTATION = gql`
+	mutation CreateCoachRating($input: CreateCoachRatingInput!) {
+		createCoachRating(input: $input) {
+			id
+			coachId
+			clientId
+			sessionLogId
+			rating
+			comment
+			createdAt
 		}
 	}
 `;
@@ -437,6 +457,44 @@ export const CREATE_SUBSCRIPTION_REQUEST_MUTATION = gql`
 			expiresAt
 			createdAt
 		}
+	}
+`;
+
+// Progress Rating mutations
+export const CREATE_PROGRESS_RATING_MUTATION = gql`
+	mutation CreateProgressRating($input: CreateProgressRatingInput!) {
+		createProgressRating(input: $input) {
+			id
+			coachId
+			clientId
+			goalId
+			startDate
+			endDate
+			rating
+			comment
+			verdict
+			sessionLogIds
+			createdAt
+		}
+	}
+`;
+
+export const UPDATE_PROGRESS_RATING_MUTATION = gql`
+	mutation UpdateProgressRating($id: ID!, $input: UpdateProgressRatingInput!) {
+		updateProgressRating(id: $id, input: $input) {
+			id
+			rating
+			comment
+			verdict
+			sessionLogIds
+			updatedAt
+		}
+	}
+`;
+
+export const DELETE_PROGRESS_RATING_MUTATION = gql`
+	mutation DeleteProgressRating($id: ID!) {
+		deleteProgressRating(id: $id)
 	}
 `;
 

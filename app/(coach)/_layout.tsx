@@ -42,15 +42,6 @@ const CoachLayout = () => {
 					}}
 				/>
 				<Tabs.Screen
-					name='schedule'
-					options={{
-						title: 'Schedule',
-						tabBarIcon: ({ color, size }) => (
-							<Ionicons name='calendar' size={size} color={color} />
-						),
-					}}
-				/>
-				<Tabs.Screen
 					name='progress'
 					options={{
 						title: 'Progress',
@@ -69,6 +60,16 @@ const CoachLayout = () => {
 					}}
 				/>
 				<Tabs.Screen
+					name='schedule'
+					options={{
+						title: 'Schedule',
+						tabBarIcon: ({ color, size }) => (
+							<Ionicons name='calendar' size={size} color={color} />
+						),
+					}}
+				/>
+
+				<Tabs.Screen
 					name='subscription'
 					options={{
 						href: null,
@@ -82,6 +83,12 @@ const CoachLayout = () => {
 				/>
 				<Tabs.Screen
 					name='sessions'
+					options={{
+						href: null,
+					}}
+				/>
+				<Tabs.Screen
+					name='completed-sessions'
 					options={{
 						href: null,
 					}}

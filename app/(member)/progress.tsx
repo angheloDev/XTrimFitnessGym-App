@@ -18,10 +18,12 @@ import {
 import {
 	GET_GOALS_QUERY,
 	GET_WEIGHT_PROGRESS_CHART_QUERY,
+	GET_PROGRESS_RATINGS_QUERY,
 } from '@/graphql/queries';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState, useEffect } from 'react';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
 	Alert,
 	Dimensions,
@@ -49,6 +51,7 @@ const goalTypeOptions = [
 
 const MemberProgress = () => {
 	const { user } = useAuth();
+	const router = useRouter();
 	const [refreshing, setRefreshing] = useState(false);
 	const [showCreateModal, setShowCreateModal] = useState(false);
 	const [selectedGoal, setSelectedGoal] = useState<any>(null);
@@ -97,6 +100,19 @@ const MemberProgress = () => {
 		variables: { clientId: user?.id || '', goalId: selectedGoal?.id },
 		skip: !selectedGoal || !showWeightChart || !user?.id,
 	});
+
+	// Query progress ratings for the selected goal
+	const { data: ratingsData } = useQuery<any>(
+		GET_PROGRESS_RATINGS_QUERY,
+		{
+			variables: {
+				clientId: user?.id || '',
+				goalId: selectedGoal?.id || '',
+			},
+			skip: !selectedGoal || !showWeightChart || !user?.id,
+			fetchPolicy: 'cache-and-network',
+		}
+	);
 
 	const [createGoal, { loading: creating }] = useMutation(
 		CREATE_GOAL_MUTATION,
@@ -260,7 +276,11 @@ const MemberProgress = () => {
 				contentContainerClassName='p-5'
 				showsVerticalScrollIndicator={false}
 				refreshControl={
-					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor='#F9C513' />
+					<RefreshControl
+						refreshing={refreshing}
+						onRefresh={onRefresh}
+						tintColor='#F9C513'
+					/>
 				}
 			>
 				<View className='mb-6'>
@@ -272,19 +292,36 @@ const MemberProgress = () => {
 							Track your fitness goals
 						</Text>
 					</View>
-					<GradientButton
+					<View className='flex-row gap-3 mt-4'>
+						<GradientButton
 						onPress={() => {
 							resetForm();
 							setShowCreateModal(true);
 						}}
-						className='mt-4'
+							className='flex-1'
+						>
+							Add Goal
+						</GradientButton>
+						<GradientButton
+							onPress={() => router.push('/(member)/session-logs')}
+							className='flex-1'
+							variant='secondary'
 					>
-						Add Goal
-					</GradientButton>
+							<View className='flex-row items-center justify-center'>
+								<Ionicons name='document-text' size={20} color='#F9C513' />
+								<Text className='text-[#F9C513] font-semibold ml-2'>
+									Session Logs
+								</Text>
+							</View>
+						</GradientButton>
+					</View>
 				</View>
 
 				{goals.length === 0 ? (
-					<View className='bg-bg-primary rounded-xl p-6 items-center border border-[#F9C513]' style={{ borderWidth: 0.5 }}>
+					<View
+						className='bg-bg-primary rounded-xl p-6 items-center border border-[#F9C513]'
+						style={{ borderWidth: 0.5 }}
+					>
 						<Ionicons name='flag-outline' size={48} color='#8E8E93' />
 						<Text className='text-text-secondary mt-4 text-center text-base'>
 							No goals yet
@@ -299,7 +336,10 @@ const MemberProgress = () => {
 						keyExtractor={(item) => item.id}
 						scrollEnabled={false}
 						renderItem={({ item }) => (
-							<View className='bg-bg-primary rounded-xl p-4 mb-3 border border-[#F9C513]' style={{ borderWidth: 0.5 }}>
+							<View
+								className='bg-bg-primary rounded-xl p-4 mb-3 border border-[#F9C513]'
+								style={{ borderWidth: 0.5 }}
+							>
 								<View className='flex-row justify-between items-start mb-2'>
 									<View className='flex-1'>
 										<Text className='text-text-primary font-semibold text-lg mb-1'>
@@ -310,6 +350,15 @@ const MemberProgress = () => {
 												(opt) => opt.value === item.goalType
 											)?.label || item.goalType}
 										</Text>
+										{item.coach && (
+											<View className='flex-row items-center mt-1'>
+												<Ionicons name='person' size={14} color='#F9C513' />
+												<Text className='text-[#F9C513] text-xs ml-1'>
+													With Coach {item.coach.firstName}{' '}
+													{item.coach.lastName}
+												</Text>
+											</View>
+										)}
 									</View>
 									<TouchableOpacity
 										onPress={() => {
@@ -351,23 +400,23 @@ const MemberProgress = () => {
 										</View>
 									)}
 									{!item.coachId && (
-										<TouchableOpacity
-											onPress={() => {
-												Alert.alert('Delete Goal', 'Are you sure?', [
-													{ text: 'Cancel', style: 'cancel' },
-													{
-														text: 'Delete',
-														style: 'destructive',
-														onPress: () =>
-															deleteGoal({
-																variables: { id: item.id },
-															}),
-													},
-												]);
-											}}
-										>
-											<Ionicons name='trash' size={24} color='#FF3B30' />
-										</TouchableOpacity>
+									<TouchableOpacity
+										onPress={() => {
+											Alert.alert('Delete Goal', 'Are you sure?', [
+												{ text: 'Cancel', style: 'cancel' },
+												{
+													text: 'Delete',
+													style: 'destructive',
+													onPress: () =>
+														deleteGoal({
+															variables: { id: item.id },
+														}),
+												},
+											]);
+										}}
+									>
+										<Ionicons name='trash' size={24} color='#FF3B30' />
+									</TouchableOpacity>
 									)}
 								</View>
 							</View>
@@ -387,7 +436,10 @@ const MemberProgress = () => {
 				}}
 			>
 				<View className='flex-1 bg-bg-darker justify-end'>
-					<View className='bg-bg-primary rounded-t-3xl p-6 max-h-[90%] border-t border-[#F9C513]' style={{ borderTopWidth: 0.5 }}>
+					<View
+						className='bg-bg-primary rounded-t-3xl p-6 max-h-[90%] border-t border-[#F9C513]'
+						style={{ borderTopWidth: 0.5 }}
+					>
 						<ScrollView showsVerticalScrollIndicator={false}>
 							<View className='flex-row justify-between items-center mb-6'>
 								<Text className='text-2xl font-bold text-text-primary'>
@@ -503,7 +555,10 @@ const MemberProgress = () => {
 				}}
 			>
 				<View className='flex-1 bg-bg-darker justify-center px-5'>
-					<View className='bg-bg-primary rounded-2xl p-6 max-h-[80%] border border-[#F9C513]' style={{ borderWidth: 0.5 }}>
+					<View
+						className='bg-bg-primary rounded-2xl p-6 max-h-[80%] border border-[#F9C513]'
+						style={{ borderWidth: 0.5 }}
+					>
 						<View className='flex-row justify-between items-center mb-4'>
 							<Text className='text-2xl font-bold text-text-primary'>
 								{selectedGoal?.title}
@@ -517,7 +572,120 @@ const MemberProgress = () => {
 								<Ionicons name='close' size={28} color='#8E8E93' />
 							</TouchableOpacity>
 						</View>
-						<ScrollView>{renderWeightChart()}</ScrollView>
+						<ScrollView>
+							{renderWeightChart()}
+							
+							{/* Progress Ratings Section */}
+							{selectedGoal?.coachId && (
+								<View className='mt-6'>
+									<Text className='text-xl font-bold text-text-primary mb-4'>
+										Progress Ratings
+									</Text>
+									{ratingsData?.getProgressRatings &&
+									ratingsData.getProgressRatings.length > 0 ? (
+										ratingsData.getProgressRatings.map((rating: any) => {
+											const startDate = new Date(rating.startDate);
+											const endDate = new Date(rating.endDate);
+											const verdictLabels: Record<string, string> = {
+												PROGRESSIVE: 'Progressive',
+												CLOSE_TO_ACHIEVEMENT: 'Close to Achievement',
+												ACHIEVED: 'Achieved',
+												REGRESSING: 'Regressing',
+											};
+											const verdictColors: Record<string, string> = {
+												PROGRESSIVE: '#10B981', // green
+												CLOSE_TO_ACHIEVEMENT: '#F59E0B', // amber
+												ACHIEVED: '#3B82F6', // blue
+												REGRESSING: '#EF4444', // red
+											};
+
+											return (
+												<View
+													key={rating.id}
+													className='bg-bg-darker rounded-xl p-4 mb-3 border border-[#F9C513]'
+													style={{ borderWidth: 0.5 }}
+												>
+													<View className='flex-row justify-between items-start mb-2'>
+														<View className='flex-1'>
+															<Text className='text-text-primary font-semibold text-base mb-1'>
+																{startDate.toLocaleDateString()} -{' '}
+																{endDate.toLocaleDateString()}
+															</Text>
+															{rating.coach && (
+																<Text className='text-text-secondary text-sm'>
+																	By Coach {rating.coach.firstName}{' '}
+																	{rating.coach.lastName}
+																</Text>
+															)}
+														</View>
+														<View
+															className='px-3 py-1 rounded-full'
+															style={{
+																backgroundColor:
+																	verdictColors[rating.verdict] || '#8E8E93',
+															}}
+														>
+															<Text className='text-white text-xs font-semibold'>
+																{verdictLabels[rating.verdict] || rating.verdict}
+															</Text>
+														</View>
+													</View>
+
+													<View className='flex-row items-center mb-2'>
+														<Text className='text-text-secondary text-sm mr-2'>
+															Rating:
+														</Text>
+														<View className='flex-row items-center'>
+															{Array.from({ length: 10 }).map((_, index) => (
+																<Ionicons
+																	key={index}
+																	name={
+																		index < rating.rating
+																			? 'star'
+																			: 'star-outline'
+																	}
+																	size={16}
+																	color='#F9C513'
+																/>
+															))}
+															<Text className='text-text-primary font-semibold ml-2'>
+																{rating.rating}/10
+															</Text>
+														</View>
+													</View>
+
+													{rating.comment && (
+														<View className='mt-2'>
+															<Text className='text-text-secondary text-xs mb-1'>
+																Comment:
+															</Text>
+															<Text className='text-text-primary text-sm'>
+																{rating.comment}
+															</Text>
+														</View>
+													)}
+
+													<Text className='text-text-secondary text-xs mt-2'>
+														Created:{' '}
+														{new Date(rating.createdAt).toLocaleDateString()}
+													</Text>
+												</View>
+											);
+										})
+									) : (
+										<View className='items-center justify-center py-8 bg-bg-darker rounded-xl border border-[#F9C513]' style={{ borderWidth: 0.5 }}>
+											<Ionicons name='star-outline' size={48} color='#8E8E93' />
+											<Text className='text-text-secondary mt-4 text-center text-base'>
+												No ratings yet
+											</Text>
+											<Text className='text-text-secondary mt-2 text-center text-sm'>
+												Your coach hasn't rated your progress for this goal yet
+											</Text>
+										</View>
+									)}
+								</View>
+							)}
+						</ScrollView>
 					</View>
 				</View>
 			</Modal>

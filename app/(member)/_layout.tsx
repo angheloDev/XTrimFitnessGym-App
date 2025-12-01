@@ -46,18 +46,19 @@ const MemberLayout = () => {
 					}}
 				/>
 				<Tabs.Screen
-					name='subscription'
+					name='schedule'
 					options={{
-						title: 'Subscription',
+						title: 'Schedule',
 						tabBarIcon: ({ color, size, focused }) => (
 							<Ionicons
-								name={focused ? 'card' : 'card-outline'}
+								name={focused ? 'calendar' : 'calendar-outline'}
 								size={size}
 								color={color}
 							/>
 						),
 					}}
 				/>
+
 				<Tabs.Screen
 					name='progress'
 					options={{
@@ -72,12 +73,12 @@ const MemberLayout = () => {
 					}}
 				/>
 				<Tabs.Screen
-					name='schedule'
+					name='subscription'
 					options={{
-						title: 'Schedule',
+						title: 'Subscription',
 						tabBarIcon: ({ color, size, focused }) => (
 							<Ionicons
-								name={focused ? 'calendar' : 'calendar-outline'}
+								name={focused ? 'card' : 'card-outline'}
 								size={size}
 								color={color}
 							/>
@@ -92,6 +93,12 @@ const MemberLayout = () => {
 				/>
 				<Tabs.Screen
 					name='coaches'
+					options={{
+						href: null,
+					}}
+				/>
+				<Tabs.Screen
+					name='session-logs'
 					options={{
 						href: null,
 					}}
