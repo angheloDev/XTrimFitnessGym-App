@@ -1,6 +1,123 @@
-import { gql } from '@apollo/client';
+﻿import { gql } from '@apollo/client';
 
-// Session queries
+export const GET_COACH_SESSIONS_QUERY = gql`
+	query GetCoachSessions($coachId: ID!, $status: SessionStatus) {
+		getCoachSessions(coachId: $coachId, status: $status) {
+			id
+			coachId
+			clientsIds
+			clients {
+				id
+				firstName
+				lastName
+				email
+			}
+			name
+			workoutType
+			date
+			startTime
+			endTime
+			gymArea
+			note
+			status
+			templateId
+			goalId
+			goal {
+				id
+				title
+				goalType
+			}
+			isTemplate
+			createdAt
+		}
+	}
+`;
+
+export const GET_CLIENT_SESSIONS_QUERY = gql`
+	query GetClientSessions($clientId: ID!, $status: SessionStatus) {
+		getClientSessions(clientId: $clientId, status: $status) {
+			id
+			coachId
+			coach {
+				id
+				firstName
+				lastName
+			}
+			name
+			workoutType
+			date
+			startTime
+			endTime
+			gymArea
+			note
+			status
+			goalId
+			goal {
+				id
+				title
+				goalType
+			}
+			createdAt
+		}
+	}
+`;
+
+export const GET_USERS_QUERY = gql`
+	query GetUsers($role: RoleType) {
+		getUsers(role: $role) {
+			id
+			firstName
+			lastName
+			email
+			role
+			phoneNumber
+			membershipDetails {
+				membershipId
+				physiqueGoalType
+				fitnessGoal
+				workOutTime
+				coachesIds
+			}
+			coachDetails {
+				clientsIds
+				sessionsIds
+				specialization
+				ratings
+				yearsOfExperience
+				moreDetails
+				teachingDate
+				teachingTime
+				clientLimit
+			}
+		}
+	}
+`;
+
+export const GET_PENDING_COACH_REQUESTS_QUERY = gql`
+	query GetPendingCoachRequests {
+		getPendingCoachRequests {
+			id
+			clientId
+			client {
+				id
+				firstName
+				lastName
+				email
+			}
+			coachId
+			coach {
+				id
+				firstName
+				lastName
+			}
+			status
+			message
+			createdAt
+			updatedAt
+		}
+	}
+`;
+
 export const GET_UPCOMING_SESSIONS_QUERY = gql`
 	query GetUpcomingSessions {
 		getUpcomingSessions {
@@ -26,54 +143,143 @@ export const GET_UPCOMING_SESSIONS_QUERY = gql`
 			gymArea
 			note
 			status
-			createdAt
-		}
-	}
-`;
-
-export const GET_COACH_SESSIONS_QUERY = gql`
-	query GetCoachSessions($coachId: ID!, $status: SessionStatus) {
-		getCoachSessions(coachId: $coachId, status: $status) {
-			id
-			coachId
-			clientsIds
-			clients {
+			goalId
+			goal {
 				id
-				firstName
-				lastName
-				email
+				title
+				goalType
 			}
-			name
-			workoutType
-			date
-			startTime
-			endTime
-			gymArea
-			note
-			status
 			createdAt
 		}
 	}
 `;
 
-export const GET_CLIENT_SESSIONS_QUERY = gql`
-	query GetClientSessions($clientId: ID!, $status: SessionStatus) {
-		getClientSessions(clientId: $clientId, status: $status) {
+export const GET_GOALS_QUERY = gql`
+	query GetGoals($clientId: ID!, $status: GoalStatus) {
+		getGoals(clientId: $clientId, status: $status) {
 			id
+			clientId
 			coachId
 			coach {
 				id
 				firstName
 				lastName
+				email
 			}
+			goalType
+			title
+			description
+			targetWeight
+			currentWeight
+			targetDate
+			status
+			createdAt
+			updatedAt
+		}
+	}
+`;
+
+export const GET_CURRENT_MEMBERSHIP_QUERY = gql`
+	query GetCurrentMembership {
+		getCurrentMembership {
+			id
+			clientId
+			membershipId
+			membership {
+				id
+				name
+				monthlyPrice
+				description
+				features
+				durationType
+			}
+			priceAtPurchase
+			startedAt
+			expiresAt
+			status
+		}
+	}
+`;
+
+export const GET_USER_QUERY = gql`
+	query GetUser($id: ID!) {
+		getUser(id: $id) {
+			id
+			firstName
+			lastName
+			email
+			role
+			phoneNumber
+			membershipDetails {
+				membershipId
+				physiqueGoalType
+				fitnessGoal
+				workOutTime
+				coachesIds
+				hasEnteredDetails
+			}
+			coachDetails {
+				clientsIds
+				sessionsIds
+				specialization
+				ratings
+				yearsOfExperience
+				moreDetails
+				teachingDate
+				teachingTime
+				clientLimit
+			}
+		}
+	}
+`;
+
+export const GET_ALL_CLIENT_GOALS_QUERY = gql`
+	query GetAllClientGoals($coachId: ID!, $status: GoalStatus) {
+		getAllClientGoals(coachId: $coachId, status: $status) {
+			id
+			clientId
+			client {
+				id
+				firstName
+				lastName
+				email
+			}
+			coachId
+			coach {
+				id
+				firstName
+				lastName
+				email
+			}
+			goalType
+			title
+			description
+			targetWeight
+			currentWeight
+			targetDate
+			status
+			createdAt
+			updatedAt
+		}
+	}
+`;
+
+export const GET_SESSION_TEMPLATES_QUERY = gql`
+	query GetSessionTemplates($coachId: ID!) {
+		getSessionTemplates(coachId: $coachId) {
+			id
+			coachId
 			name
 			workoutType
-			date
-			startTime
-			endTime
 			gymArea
 			note
-			status
+			goalId
+			goal {
+				id
+				title
+				goalType
+			}
+			isTemplate
 			createdAt
 		}
 	}
@@ -105,6 +311,14 @@ export const GET_SESSION_QUERY = gql`
 			gymArea
 			note
 			status
+			templateId
+			goalId
+			goal {
+				id
+				title
+				goalType
+			}
+			isTemplate
 			createdAt
 		}
 	}
@@ -144,30 +358,18 @@ export const GET_WEIGHT_PROGRESS_QUERY = gql`
 	}
 `;
 
-// Goal queries
-export const GET_GOALS_QUERY = gql`
-	query GetGoals($clientId: ID!, $status: GoalStatus) {
-		getGoals(clientId: $clientId, status: $status) {
-			id
-			clientId
-			goalType
-			title
-			description
-			targetWeight
-			currentWeight
-			targetDate
-			status
-			createdAt
-			updatedAt
-		}
-	}
-`;
-
 export const GET_GOAL_QUERY = gql`
 	query GetGoal($id: ID!) {
 		getGoal(id: $id) {
 			id
 			clientId
+			coachId
+			coach {
+				id
+				firstName
+				lastName
+				email
+			}
 			goalType
 			title
 			description
@@ -192,7 +394,6 @@ export const GET_WEIGHT_PROGRESS_CHART_QUERY = gql`
 	}
 `;
 
-// Membership queries
 export const GET_MEMBERSHIPS_QUERY = gql`
 	query GetMemberships($status: MembershipStatus) {
 		getMemberships(status: $status) {
@@ -217,118 +418,6 @@ export const GET_MEMBERSHIP_QUERY = gql`
 			features
 			status
 			durationType
-		}
-	}
-`;
-
-export const GET_CURRENT_MEMBERSHIP_QUERY = gql`
-	query GetCurrentMembership {
-		getCurrentMembership {
-			id
-			clientId
-			membershipId
-			membership {
-				id
-				name
-				monthlyPrice
-				description
-				features
-				durationType
-			}
-			priceAtPurchase
-			startedAt
-			expiresAt
-			status
-		}
-	}
-`;
-
-// User queries
-export const GET_USER_QUERY = gql`
-	query GetUser($id: ID!) {
-		getUser(id: $id) {
-			id
-			firstName
-			lastName
-			email
-			role
-			phoneNumber
-			membershipDetails {
-				membershipId
-				physiqueGoalType
-				fitnessGoal
-				workOutTime
-				coachesIds
-				hasEnteredDetails
-			}
-			coachDetails {
-				clientsIds
-				sessionsIds
-				specialization
-				ratings
-				yearsOfExperience
-				moreDetails
-				teachingDate
-				teachingTime
-				clientLimit
-			}
-		}
-	}
-`;
-
-export const GET_USERS_QUERY = gql`
-	query GetUsers($role: RoleType) {
-		getUsers(role: $role) {
-			id
-			firstName
-			lastName
-			email
-			role
-			phoneNumber
-			membershipDetails {
-				membershipId
-				physiqueGoalType
-				fitnessGoal
-				workOutTime
-				coachesIds
-			}
-			coachDetails {
-				clientsIds
-				sessionsIds
-				specialization
-				ratings
-				yearsOfExperience
-				moreDetails
-				teachingDate
-				teachingTime
-				clientLimit
-			}
-		}
-	}
-`;
-
-// Coach Request queries
-export const GET_PENDING_COACH_REQUESTS_QUERY = gql`
-	query GetPendingCoachRequests {
-		getPendingCoachRequests {
-			id
-			clientId
-			client {
-				id
-				firstName
-				lastName
-				email
-			}
-			coachId
-			coach {
-				id
-				firstName
-				lastName
-			}
-			status
-			message
-			createdAt
-			updatedAt
 		}
 	}
 `;
@@ -383,7 +472,6 @@ export const GET_CLIENT_REQUESTS_QUERY = gql`
 	}
 `;
 
-// Subscription Request queries
 export const GET_MY_SUBSCRIPTION_REQUESTS_QUERY = gql`
 	query GetMySubscriptionRequests {
 		getMySubscriptionRequests {
@@ -409,3 +497,8 @@ export const GET_MY_SUBSCRIPTION_REQUESTS_QUERY = gql`
 	}
 `;
 
+export const GET_FITNESS_GOAL_TYPES_QUERY = gql`
+	query GetFitnessGoalTypes {
+		getFitnessGoalTypes
+	}
+`;

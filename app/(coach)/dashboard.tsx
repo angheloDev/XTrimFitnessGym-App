@@ -82,9 +82,27 @@ const CoachDashboard = () => {
 	const clients = allClients.filter((client: any) =>
 		user?.coachDetails?.clientsIds?.includes(client.id)
 	);
-	const upcomingSessions = sessions.filter(
-		(s: any) => new Date(s.date) >= new Date() && s.status === 'scheduled'
-	);
+	const upcomingSessions = useMemo(() => {
+		const now = new Date();
+		// Set to start of today for accurate date comparison
+		now.setHours(0, 0, 0, 0);
+		
+		return sessions.filter((s: any) => {
+			// Exclude templates
+			if (s.isTemplate) return false;
+			
+			// Exclude cancelled sessions
+			if (s.status === 'cancelled') return false;
+			
+			// Only include scheduled sessions
+			if (s.status !== 'scheduled') return false;
+			
+			// Only include future sessions (including today)
+			const sessionDate = new Date(s.date);
+			sessionDate.setHours(0, 0, 0, 0);
+			return sessionDate >= now;
+		});
+	}, [sessions]);
 
 	const pendingRequests = useMemo(() => {
 		const allRequests = (requestsData as any)?.getPendingCoachRequests || [];
@@ -291,68 +309,6 @@ const CoachDashboard = () => {
 					</View>
 				</View>
 
-				{/* Specializations */}
-				{user?.coachDetails?.specialization &&
-					user.coachDetails.specialization.length > 0 && (
-						<View className='bg-bg-primary rounded-xl p-5 mb-6 border border-[#F9C513]/20'>
-							<View className='flex-row items-center mb-4'>
-								<View className='bg-[#F9C513]/20 rounded-lg p-2 mr-3'>
-									<Ionicons name='fitness' size={24} color='#F9C513' />
-								</View>
-								<Text className='text-xl font-semibold text-text-primary'>
-									Specializations
-								</Text>
-							</View>
-							<View className='flex-row flex-wrap gap-2'>
-								{user.coachDetails.specialization.map(
-									(spec: string, index: number) => (
-										<View
-											key={index}
-											className='bg-[#F9C513]/10 px-3 py-2 rounded-full border border-[#F9C513]/30'
-										>
-											<Text className='text-[#F9C513] text-sm font-medium'>
-												{spec}
-											</Text>
-										</View>
-									)
-								)}
-							</View>
-						</View>
-					)}
-
-				{/* Pending Requests */}
-				{pendingRequests.length > 0 && (
-					<View className='mb-6'>
-						<View className='flex-row justify-between items-center mb-4'>
-							<View className='flex-row items-center'>
-								<View className='bg-[#F9C513]/20 rounded-lg p-2 mr-2'>
-									<Ionicons name='mail' size={24} color='#F9C513' />
-								</View>
-								<Text className='text-xl font-semibold text-text-primary'>
-									Pending Requests
-								</Text>
-							</View>
-							<View className='bg-red-500/20 px-3 py-1 rounded-full border border-red-500/30'>
-								<Text className='text-red-400 text-xs font-semibold'>
-									{pendingRequests.length} NEW
-								</Text>
-							</View>
-						</View>
-						<TouchableOpacity
-							onPress={() => router.push('/(coach)/requests')}
-							className='bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20'
-						>
-							<Text className='text-text-primary font-semibold mb-1'>
-								You have {pendingRequests.length} pending client request
-								{pendingRequests.length !== 1 ? 's' : ''}
-							</Text>
-							<Text className='text-[#F9C513] text-sm font-medium'>
-								Tap to review →
-							</Text>
-						</TouchableOpacity>
-					</View>
-				)}
-
 				{/* Upcoming Sessions */}
 				<View className='mb-6'>
 					<View className='flex-row justify-between items-center mb-4'>
@@ -418,6 +374,68 @@ const CoachDashboard = () => {
 						/>
 					)}
 				</View>
+
+				{/* Specializations */}
+				{user?.coachDetails?.specialization &&
+					user.coachDetails.specialization.length > 0 && (
+						<View className='bg-bg-primary rounded-xl p-5 mb-6 border border-[#F9C513]/20'>
+							<View className='flex-row items-center mb-4'>
+								<View className='bg-[#F9C513]/20 rounded-lg p-2 mr-3'>
+									<Ionicons name='fitness' size={24} color='#F9C513' />
+								</View>
+								<Text className='text-xl font-semibold text-text-primary'>
+									Specializations
+								</Text>
+							</View>
+							<View className='flex-row flex-wrap gap-2'>
+								{user.coachDetails.specialization.map(
+									(spec: string, index: number) => (
+										<View
+											key={index}
+											className='bg-[#F9C513]/10 px-3 py-2 rounded-full border border-[#F9C513]/30'
+										>
+											<Text className='text-[#F9C513] text-sm font-medium'>
+												{spec}
+											</Text>
+										</View>
+									)
+								)}
+							</View>
+						</View>
+					)}
+
+				{/* Pending Requests */}
+				{pendingRequests.length > 0 && (
+					<View className='mb-6'>
+						<View className='flex-row justify-between items-center mb-4'>
+							<View className='flex-row items-center'>
+								<View className='bg-[#F9C513]/20 rounded-lg p-2 mr-2'>
+									<Ionicons name='mail' size={24} color='#F9C513' />
+								</View>
+								<Text className='text-xl font-semibold text-text-primary'>
+									Pending Requests
+								</Text>
+							</View>
+							<View className='bg-red-500/20 px-3 py-1 rounded-full border border-red-500/30'>
+								<Text className='text-red-400 text-xs font-semibold'>
+									{pendingRequests.length} NEW
+								</Text>
+							</View>
+						</View>
+						<TouchableOpacity
+							onPress={() => router.push('/(coach)/requests')}
+							className='bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20'
+						>
+							<Text className='text-text-primary font-semibold mb-1'>
+								You have {pendingRequests.length} pending client request
+								{pendingRequests.length !== 1 ? 's' : ''}
+							</Text>
+							<Text className='text-[#F9C513] text-sm font-medium'>
+								Tap to review →
+							</Text>
+						</TouchableOpacity>
+					</View>
+				)}
 
 				{/* Quick Actions */}
 				<View className='mb-6'>

@@ -112,6 +112,51 @@ export const CREATE_SESSION_MUTATION = gql`
 			gymArea
 			note
 			status
+			templateId
+			goalId
+			goal {
+				id
+				title
+				goalType
+			}
+			isTemplate
+			createdAt
+		}
+	}
+`;
+
+export const CREATE_SESSION_FROM_TEMPLATE_MUTATION = gql`
+	mutation CreateSessionFromTemplate($input: CreateSessionFromTemplateInput!) {
+		createSessionFromTemplate(input: $input) {
+			id
+			coachId
+			coach {
+				id
+				firstName
+				lastName
+			}
+			clientsIds
+			clients {
+				id
+				firstName
+				lastName
+				email
+			}
+			name
+			workoutType
+			date
+			startTime
+			endTime
+			gymArea
+			note
+			status
+			templateId
+			goalId
+			goal {
+				id
+				title
+				goalType
+			}
 			createdAt
 		}
 	}
@@ -211,6 +256,31 @@ export const UPDATE_GOAL_MUTATION = gql`
 export const DELETE_GOAL_MUTATION = gql`
 	mutation DeleteGoal($id: ID!) {
 		deleteGoal(id: $id)
+	}
+`;
+
+export const ASSIGN_COACH_TO_GOAL_MUTATION = gql`
+	mutation AssignCoachToGoal($goalId: ID!) {
+		assignCoachToGoal(goalId: $goalId) {
+			id
+			clientId
+			coachId
+			coach {
+				id
+				firstName
+				lastName
+				email
+			}
+			goalType
+			title
+			description
+			targetWeight
+			currentWeight
+			targetDate
+			status
+			createdAt
+			updatedAt
+		}
 	}
 `;
 

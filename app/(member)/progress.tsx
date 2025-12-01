@@ -263,7 +263,7 @@ const MemberProgress = () => {
 					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor='#F9C513' />
 				}
 			>
-				<View className='flex-row justify-between items-center mb-6'>
+				<View className='mb-6'>
 					<View>
 						<Text className='text-3xl font-bold text-text-primary'>
 							Progress
@@ -272,19 +272,19 @@ const MemberProgress = () => {
 							Track your fitness goals
 						</Text>
 					</View>
-					<TouchableOpacity
+					<GradientButton
 						onPress={() => {
 							resetForm();
 							setShowCreateModal(true);
 						}}
-						className='bg-[#F9C513] rounded-full p-3'
+						className='mt-4'
 					>
-						<Ionicons name='add' size={24} color='#000' />
-					</TouchableOpacity>
+						Add Goal
+					</GradientButton>
 				</View>
 
 				{goals.length === 0 ? (
-					<View className='bg-bg-primary rounded-xl p-6 items-center'>
+					<View className='bg-bg-primary rounded-xl p-6 items-center border border-[#F9C513]' style={{ borderWidth: 0.5 }}>
 						<Ionicons name='flag-outline' size={48} color='#8E8E93' />
 						<Text className='text-text-secondary mt-4 text-center text-base'>
 							No goals yet
@@ -292,15 +292,6 @@ const MemberProgress = () => {
 						<Text className='text-text-secondary mt-2 text-center text-sm'>
 							Create a goal to start tracking your progress
 						</Text>
-						<GradientButton
-							onPress={() => {
-								resetForm();
-								setShowCreateModal(true);
-							}}
-							className='mt-4'
-						>
-							Create Goal
-						</GradientButton>
 					</View>
 				) : (
 					<FlatList
@@ -308,7 +299,7 @@ const MemberProgress = () => {
 						keyExtractor={(item) => item.id}
 						scrollEnabled={false}
 						renderItem={({ item }) => (
-							<View className='bg-bg-primary rounded-xl p-4 mb-3'>
+							<View className='bg-bg-primary rounded-xl p-4 mb-3 border border-[#F9C513]' style={{ borderWidth: 0.5 }}>
 								<View className='flex-row justify-between items-start mb-2'>
 									<View className='flex-1'>
 										<Text className='text-text-primary font-semibold text-lg mb-1'>
@@ -359,23 +350,25 @@ const MemberProgress = () => {
 											)}
 										</View>
 									)}
-									<TouchableOpacity
-										onPress={() => {
-											Alert.alert('Delete Goal', 'Are you sure?', [
-												{ text: 'Cancel', style: 'cancel' },
-												{
-													text: 'Delete',
-													style: 'destructive',
-													onPress: () =>
-														deleteGoal({
-															variables: { id: item.id },
-														}),
-												},
-											]);
-										}}
-									>
-										<Ionicons name='trash' size={24} color='#FF3B30' />
-									</TouchableOpacity>
+									{!item.coachId && (
+										<TouchableOpacity
+											onPress={() => {
+												Alert.alert('Delete Goal', 'Are you sure?', [
+													{ text: 'Cancel', style: 'cancel' },
+													{
+														text: 'Delete',
+														style: 'destructive',
+														onPress: () =>
+															deleteGoal({
+																variables: { id: item.id },
+															}),
+													},
+												]);
+											}}
+										>
+											<Ionicons name='trash' size={24} color='#FF3B30' />
+										</TouchableOpacity>
+									)}
 								</View>
 							</View>
 						)}
@@ -394,7 +387,7 @@ const MemberProgress = () => {
 				}}
 			>
 				<View className='flex-1 bg-bg-darker justify-end'>
-					<View className='bg-bg-primary rounded-t-3xl p-6 max-h-[90%]'>
+					<View className='bg-bg-primary rounded-t-3xl p-6 max-h-[90%] border-t border-[#F9C513]' style={{ borderTopWidth: 0.5 }}>
 						<ScrollView showsVerticalScrollIndicator={false}>
 							<View className='flex-row justify-between items-center mb-6'>
 								<Text className='text-2xl font-bold text-text-primary'>
@@ -510,7 +503,7 @@ const MemberProgress = () => {
 				}}
 			>
 				<View className='flex-1 bg-bg-darker justify-center px-5'>
-					<View className='bg-bg-primary rounded-2xl p-6 max-h-[80%]'>
+					<View className='bg-bg-primary rounded-2xl p-6 max-h-[80%] border border-[#F9C513]' style={{ borderWidth: 0.5 }}>
 						<View className='flex-row justify-between items-center mb-4'>
 							<Text className='text-2xl font-bold text-text-primary'>
 								{selectedGoal?.title}
