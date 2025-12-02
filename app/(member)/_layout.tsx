@@ -46,6 +46,19 @@ const MemberLayout = () => {
 					}}
 				/>
 				<Tabs.Screen
+					name='workouts'
+					options={{
+						title: 'Workouts',
+						tabBarIcon: ({ color, size, focused }) => (
+							<Ionicons
+								name={focused ? 'barbell' : 'barbell-outline'}
+								size={size}
+								color={color}
+							/>
+						),
+					}}
+				/>
+				<Tabs.Screen
 					name='schedule'
 					options={{
 						title: 'Schedule',
@@ -58,7 +71,6 @@ const MemberLayout = () => {
 						),
 					}}
 				/>
-
 				<Tabs.Screen
 					name='progress'
 					options={{
@@ -72,6 +84,7 @@ const MemberLayout = () => {
 						),
 					}}
 				/>
+
 				<Tabs.Screen
 					name='subscription'
 					options={{
@@ -99,12 +112,6 @@ const MemberLayout = () => {
 				/>
 				<Tabs.Screen
 					name='session-logs'
-					options={{
-						href: null,
-					}}
-				/>
-				<Tabs.Screen
-					name='workouts'
 					options={{
 						href: null,
 					}}

@@ -7,11 +7,13 @@ const FixedView = ({
 	children,
 	style,
 	className,
+	extraTopPadding = 0,
 	...rest
 }: {
 	children?: React.ReactNode;
 	style?: StyleProp<ViewStyle>;
 	className?: string;
+	extraTopPadding?: number;
 }) => {
 	const insets = useSafeAreaInsets();
 	return (
@@ -19,7 +21,10 @@ const FixedView = ({
 			<StatusBar style='light' backgroundColor='transparent' />
 			<View
 				style={[
-					{ paddingTop: insets.top, paddingBottom: insets.bottom },
+					{
+						paddingTop: insets.top + extraTopPadding,
+						paddingBottom: insets.bottom,
+					},
 					style,
 				]}
 				className={className}
