@@ -8,6 +8,7 @@ import {
 	FlatList,
 	Modal,
 	RefreshControl,
+	ScrollView,
 	StyleSheet,
 	Text,
 	TextInput,
@@ -30,6 +31,7 @@ const ALL_CATEGORY = 'all';
 
 const MemberWorkouts = () => {
 	const [exercises, setExercises] = useState<Exercise[]>([]);
+	const [allExercises, setAllExercises] = useState<Exercise[] | null>(null);
 	const [filteredExercises, setFilteredExercises] = useState<Exercise[]>([]);
 	const [categories, setCategories] = useState<string[]>([]);
 	const [selectedCategory, setSelectedCategory] =
@@ -37,6 +39,7 @@ const MemberWorkouts = () => {
 	const [search, setSearch] = useState('');
 	const [isLoading, setIsLoading] = useState(false);
 	const [isCategoriesLoading, setIsCategoriesLoading] = useState(false);
+	const [isGlobalSearchLoading, setIsGlobalSearchLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(
 		null
@@ -111,6 +114,40 @@ const MemberWorkouts = () => {
 		[apiKey]
 	);
 
+	const ensureAllExercisesLoaded = useCallback(async () => {
+		if (allExercises && allExercises.length > 0) {
+			return allExercises;
+		}
+
+		try {
+			setIsGlobalSearchLoading(true);
+
+			const response = await fetch(
+				'https://exercisedb.p.rapidapi.com/exercises?limit=1200&offset=0',
+				{
+					method: 'GET',
+					headers: {
+						'X-RapidAPI-Key': apiKey as string,
+						'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
+					},
+				}
+			);
+
+			if (!response.ok) {
+				throw new Error(`Failed to load all workouts (${response.status})`);
+			}
+
+			const data = (await response.json()) as Exercise[];
+			setAllExercises(data);
+			return data;
+		} catch {
+			// If this fails, fall back to current category data only
+			return exercises;
+		} finally {
+			setIsGlobalSearchLoading(false);
+		}
+	}, [allExercises, apiKey, exercises]);
+
 	useEffect(() => {
 		if (!canFetch) return;
 
@@ -156,22 +193,28 @@ const MemberWorkouts = () => {
 	}, [apiKey, canFetch, fetchExercisesByCategory]);
 
 	useEffect(() => {
-		const trimmed = search.trim();
-		if (!trimmed) {
-			setFilteredExercises(exercises);
-			return;
-		}
+		const runSearch = async () => {
+			const trimmed = search.trim();
+			if (!trimmed) {
+				setFilteredExercises(exercises);
+				return;
+			}
 
-		const q = trimmed.toLowerCase();
-		setFilteredExercises(
-			exercises.filter(
-				(ex) =>
-					ex.name.toLowerCase().includes(q) ||
-					ex.bodyPart.toLowerCase().includes(q) ||
-					ex.target.toLowerCase().includes(q)
-			)
-		);
-	}, [exercises, search]);
+			const source = await ensureAllExercisesLoaded();
+			const q = trimmed.toLowerCase();
+
+			setFilteredExercises(
+				source.filter(
+					(ex) =>
+						ex.name.toLowerCase().includes(q) ||
+						ex.bodyPart.toLowerCase().includes(q) ||
+						ex.target.toLowerCase().includes(q)
+				)
+			);
+		};
+
+		void runSearch();
+	}, [ensureAllExercisesLoaded, exercises, search]);
 
 	useEffect(() => {
 		if (!hasCompletedCurrentRound || secondsLeft !== 0) return;
@@ -283,7 +326,7 @@ const MemberWorkouts = () => {
 	}, [canFetch, fetchExercisesByCategory, selectedCategory]);
 
 	return (
-		<FixedView className='flex-1 bg-black px-4' extraTopPadding={16}>
+		<FixedView className='flex-1 bg-bg-darker px-4' extraTopPadding={16}>
 			<View style={styles.header}>
 				<View style={styles.headerRow}>
 					<View style={styles.headerTextGroup}>
@@ -329,6 +372,9 @@ const MemberWorkouts = () => {
 							onChangeText={setSearch}
 							style={styles.searchInput}
 						/>
+						{isGlobalSearchLoading && (
+							<ActivityIndicator size='small' color='#F9C513' />
+						)}
 					</View>
 
 					{categories.length > 0 && (
@@ -403,7 +449,11 @@ const MemberWorkouts = () => {
 				<View style={styles.modalOverlay}>
 					<View style={styles.modalContent}>
 						{selectedExercise && (
-							<>
+							<ScrollView
+								showsVerticalScrollIndicator={false}
+								contentContainerStyle={styles.modalScrollContent}
+								keyboardShouldPersistTaps='handled'
+							>
 								<View style={styles.modalHeaderRow}>
 									<Text style={styles.modalTitle}>{selectedExercise.name}</Text>
 									<TouchableOpacity
@@ -524,7 +574,7 @@ const MemberWorkouts = () => {
 								>
 									<Text style={styles.closeButtonText}>Close</Text>
 								</TouchableOpacity>
-							</>
+							</ScrollView>
 						)}
 					</View>
 				</View>
@@ -722,6 +772,10 @@ const styles = StyleSheet.create({
 		padding: 20,
 		maxHeight: '80%',
 	},
+	modalScrollContent: {
+		paddingBottom: 16,
+		gap: 8,
+	},
 	modalHeaderRow: {
 		flexDirection: 'row',
 		alignItems: 'center',
@@ -780,10 +834,11 @@ const styles = StyleSheet.create({
 		marginBottom: 4,
 	},
 	timerValue: {
-		fontSize: 32,
+		fontSize: 60,
 		fontWeight: '700',
 		color: '#F9C513',
 		marginBottom: 10,
+		textAlign: 'center',
 	},
 	timerButtonsRow: {
 		flexDirection: 'row',

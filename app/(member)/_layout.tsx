@@ -16,6 +16,7 @@ const MemberLayout = () => {
 			<Tabs
 				screenOptions={{
 					headerShown: false,
+					tabBarHideOnKeyboard: true,
 					tabBarActiveTintColor: '#F9C513',
 					tabBarInactiveTintColor: '#8E8E93',
 					tabBarStyle: {
