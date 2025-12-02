@@ -27,10 +27,6 @@ const DEFAULT_TIMER_SECONDS = 30;
 const TIMER_OPTIONS = [20, 30, 45, 60];
 const IMAGE_RESOLUTION = '360';
 const ALL_CATEGORY = 'all';
-const START_BEEP_URL =
-	'https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg';
-const END_BEEP_URL =
-	'https://actions.google.com/sounds/v1/alarms/beep_short.ogg';
 
 const MemberWorkouts = () => {
 	const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -408,7 +404,16 @@ const MemberWorkouts = () => {
 					<View style={styles.modalContent}>
 						{selectedExercise && (
 							<>
-								<Text style={styles.modalTitle}>{selectedExercise.name}</Text>
+								<View style={styles.modalHeaderRow}>
+									<Text style={styles.modalTitle}>{selectedExercise.name}</Text>
+									<TouchableOpacity
+										onPress={closeModal}
+										style={styles.modalCloseIconButton}
+										hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+									>
+										<Text style={styles.modalCloseIconText}>✕</Text>
+									</TouchableOpacity>
+								</View>
 								<Text style={styles.modalSubtitle}>
 									{selectedExercise.bodyPart} • {selectedExercise.target}
 								</Text>
@@ -717,12 +722,30 @@ const styles = StyleSheet.create({
 		padding: 20,
 		maxHeight: '80%',
 	},
+	modalHeaderRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+		gap: 12,
+	},
 	modalTitle: {
 		fontSize: 20,
 		fontWeight: '700',
 		color: '#F9FAFB',
 		marginBottom: 4,
 		textTransform: 'capitalize',
+	},
+	modalCloseIconButton: {
+		width: 28,
+		height: 28,
+		borderRadius: 999,
+		alignItems: 'center',
+		justifyContent: 'center',
+		backgroundColor: '#1F2937',
+	},
+	modalCloseIconText: {
+		color: '#E5E7EB',
+		fontSize: 16,
 	},
 	modalSubtitle: {
 		fontSize: 14,
