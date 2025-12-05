@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import React, { useEffect, useState } from 'react';
+import { Modal, Platform, Text, TouchableOpacity, View } from 'react-native';
 
 interface TimePickerProps {
 	label?: string;
@@ -24,6 +24,18 @@ const TimePicker: React.FC<TimePickerProps> = ({
 	const [show, setShow] = useState(false);
 	const [internalTime, setInternalTime] = useState(value || new Date());
 
+	useEffect(() => {
+		if (value) {
+			setInternalTime(value);
+		}
+	}, [value]);
+
+	useEffect(() => {
+		if (show && value) {
+			setInternalTime(value);
+		}
+	}, [show]);
+
 	const handleTimeChange = (event: any, selectedTime?: Date) => {
 		if (Platform.OS === 'android') {
 			setShow(false);
@@ -32,6 +44,11 @@ const TimePicker: React.FC<TimePickerProps> = ({
 			setInternalTime(selectedTime);
 			onChange(selectedTime);
 		}
+	};
+
+	const handleConfirm = () => {
+		setShow(false);
+		onChange(internalTime);
 	};
 
 	const formatTime = (date: Date) => {
@@ -70,20 +87,81 @@ const TimePicker: React.FC<TimePickerProps> = ({
 			</TouchableOpacity>
 			{error && <Text className='text-red-500 text-sm mt-1'>{error}</Text>}
 
-			{show && (
-				<View style={{ alignItems: 'center', marginTop: 10 }}>
-					<DateTimePicker
-						value={internalTime}
-						mode='time'
-						display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-						onChange={handleTimeChange}
-						is24Hour={false}
-					/>
-				</View>
+			{show && Platform.OS === 'ios' ? (
+				<Modal
+					visible={show}
+					transparent={true}
+					animationType='slide'
+					onRequestClose={() => setShow(false)}
+				>
+					<View
+						style={{
+							flex: 1,
+							backgroundColor: 'rgba(0, 0, 0, 0.5)',
+							justifyContent: 'flex-end',
+						}}
+					>
+						<View
+							style={{
+								backgroundColor: '#1C1C1E',
+								borderTopLeftRadius: 20,
+								borderTopRightRadius: 20,
+								padding: 20,
+							}}
+						>
+							<View
+								style={{
+									flexDirection: 'row',
+									justifyContent: 'space-between',
+									alignItems: 'center',
+									marginBottom: 10,
+								}}
+							>
+								<TouchableOpacity onPress={() => setShow(false)}>
+									<Text style={{ color: '#8E8E93', fontSize: 16 }}>Cancel</Text>
+								</TouchableOpacity>
+								<TouchableOpacity onPress={handleConfirm}>
+									<Text
+										style={{
+											color: '#F9C513',
+											fontSize: 16,
+											fontWeight: '600',
+										}}
+									>
+										Done
+									</Text>
+								</TouchableOpacity>
+							</View>
+							<DateTimePicker
+								value={internalTime}
+								mode='time'
+								display='spinner'
+								onChange={(event, selectedTime) => {
+									if (selectedTime) {
+										setInternalTime(selectedTime);
+									}
+								}}
+								is24Hour={false}
+								textColor='#F5F5F5'
+							/>
+						</View>
+					</View>
+				</Modal>
+			) : (
+				show && (
+					<View style={{ alignItems: 'center', marginTop: 10 }}>
+						<DateTimePicker
+							value={internalTime}
+							mode='time'
+							display='default'
+							onChange={handleTimeChange}
+							is24Hour={false}
+						/>
+					</View>
+				)
 			)}
 		</View>
 	);
 };
 
 export default TimePicker;
-

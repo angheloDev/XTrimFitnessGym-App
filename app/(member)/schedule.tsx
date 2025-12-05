@@ -13,7 +13,8 @@ import { formatTimeTo12Hour } from '@/utils/time-utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import React, { useEffect, useState } from 'react';
+import { Image as ExpoImage } from 'expo-image';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
 	ActivityIndicator,
 	Alert,
@@ -79,6 +80,31 @@ const MemberSchedule = () => {
 	const [completedCoachId, setCompletedCoachId] = useState<string | null>(null);
 	const [coachRating, setCoachRating] = useState<number>(0);
 	const [coachComment, setCoachComment] = useState<string>('');
+	const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+
+	const apiKey =
+		(Constants?.expoConfig as any)?.extra?.exerciseDbApiKey ??
+		(Constants?.manifest as any)?.extra?.exerciseDbApiKey;
+
+	const buildExerciseImageUrl = useCallback(
+		(exerciseId: string) => {
+			if (!apiKey) return null;
+			return `https://exercisedb.p.rapidapi.com/image?exerciseId=${encodeURIComponent(
+				exerciseId
+			)}&resolution=360&rapidapi-key=${apiKey}`;
+		},
+		[apiKey]
+	);
+
+	const parseWorkoutData = useCallback((workoutType: string | null | undefined) => {
+		if (!workoutType) return [];
+		try {
+			const parsed = JSON.parse(workoutType);
+			return Array.isArray(parsed) ? parsed : [];
+		} catch {
+			return [];
+		}
+	}, []);
 
 	const { data, refetch, loading } = useQuery<GetClientSessionsQuery>(
 		GET_CLIENT_SESSIONS_QUERY,
@@ -412,6 +438,85 @@ const MemberSchedule = () => {
 										)}
 									</View>
 								</View>
+
+								{/* Workout Exercises */}
+								{item.workoutType && (() => {
+									const workouts = parseWorkoutData(item.workoutType);
+									if (workouts.length === 0) return null;
+									
+									const isExpanded = expandedSessionId === item.id;
+									
+									return (
+										<View className='mt-3'>
+											<TouchableOpacity
+												onPress={() => setExpandedSessionId(isExpanded ? null : item.id)}
+												className='flex-row items-center justify-between p-3 bg-bg-darker rounded-lg border border-[#F9C513]'
+												style={{ borderWidth: 0.5 }}
+											>
+												<View className='flex-row items-center'>
+													<Ionicons name='barbell' size={20} color='#F9C513' />
+													<Text className='text-text-primary font-semibold ml-2'>
+														Workout Exercises ({workouts.length})
+													</Text>
+												</View>
+												<Ionicons
+													name={isExpanded ? 'chevron-up' : 'chevron-down'}
+													size={20}
+													color='#8E8E93'
+												/>
+											</TouchableOpacity>
+
+											{isExpanded && (
+												<View className='mt-2'>
+													{workouts.map((workout: any, index: number) => {
+														const gifUrl = workout.gifUrl || buildExerciseImageUrl(workout.id || '');
+														return (
+															<View
+																key={index}
+																className='bg-bg-darker rounded-lg p-3 mb-2 border border-[#F9C513]'
+																style={{ borderWidth: 0.5 }}
+															>
+																<View className='flex-row items-start'>
+																	{gifUrl && (
+																		<ExpoImage
+																			source={{ uri: gifUrl }}
+																			style={{
+																				width: 80,
+																				height: 80,
+																				borderRadius: 8,
+																				marginRight: 12,
+																			}}
+																			contentFit='cover'
+																		/>
+																	)}
+																	<View className='flex-1'>
+																		<Text className='text-text-primary font-semibold text-base mb-1'>
+																			{workout.name || 'Unknown Exercise'}
+																		</Text>
+																		<Text className='text-text-secondary text-sm mb-1'>
+																			{workout.bodyPart || ''} • {workout.target || ''}
+																		</Text>
+																		{workout.equipment && (
+																			<Text className='text-text-secondary text-xs mb-2'>
+																				Equipment: {workout.equipment}
+																			</Text>
+																		)}
+																		<View className='flex-row items-center mt-1'>
+																			<Text className='text-[#F9C513] font-semibold text-sm'>
+																				{workout.sets || 0} sets × {workout.reps || 0} reps
+																			</Text>
+																		</View>
+																	</View>
+																</View>
+															</View>
+														);
+													})}
+												</View>
+											)}
+										</View>
+									);
+								})()}
+
 								{isSessionCurrentlyActive(item) && (
 									<GradientButton
 										onPress={() => handleCompleteSession(item)}

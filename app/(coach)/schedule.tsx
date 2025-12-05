@@ -3,39 +3,43 @@ import FixedView from '@/components/FixedView';
 import GradientButton from '@/components/GradientButton';
 import Input from '@/components/Input';
 import Select from '@/components/Select';
-import TimePicker from '@/components/TimePicker';
 import TabHeader from '@/components/TabHeader';
+import TimePicker from '@/components/TimePicker';
 import { useAuth } from '@/contexts/AuthContext';
 import {
 	ASSIGN_COACH_TO_GOAL_MUTATION,
 	CANCEL_SESSION_MUTATION,
-	CREATE_SESSION_MUTATION,
 	CREATE_SESSION_FROM_TEMPLATE_MUTATION,
+	CREATE_SESSION_MUTATION,
 } from '@/graphql/mutations';
 import {
 	GET_ALL_CLIENT_GOALS_QUERY,
+	GET_COACH_SESSION_LOGS_QUERY,
 	GET_COACH_SESSIONS_QUERY,
+	GET_SESSION_LOG_BY_SESSION_ID_QUERY,
 	GET_SESSION_TEMPLATES_QUERY,
 	GET_USERS_QUERY,
-	GET_SESSION_LOG_BY_SESSION_ID_QUERY,
-	GET_COACH_SESSION_LOGS_QUERY,
 } from '@/graphql/queries';
+import { formatTimeTo12Hour } from '@/utils/time-utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState, useEffect, useMemo } from 'react';
-import { formatTimeTo12Hour } from '@/utils/time-utils';
+import Constants from 'expo-constants';
+import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+	ActivityIndicator,
 	Alert,
+	Dimensions,
 	FlatList,
+	Image,
 	Modal,
 	RefreshControl,
 	ScrollView,
 	Text,
+	TextInput,
 	TouchableOpacity,
 	View,
-	Image,
-	Dimensions,
 } from 'react-native';
 
 const gymAreas = [
@@ -66,7 +70,147 @@ const CoachSchedule = () => {
 	const [errors, setErrors] = useState<Record<string, string>>({});
 	const [templatesExpanded, setTemplatesExpanded] = useState(false);
 	const [showProgressImagesModal, setShowProgressImagesModal] = useState(false);
-	const [selectedSessionForProgress, setSelectedSessionForProgress] = useState<any>(null);
+	const [selectedSessionForProgress, setSelectedSessionForProgress] =
+		useState<any>(null);
+
+	// Workout selection states
+	const [showWorkoutModal, setShowWorkoutModal] = useState(false);
+	const [wasCreateModalOpen, setWasCreateModalOpen] = useState(false);
+	const [exercises, setExercises] = useState<any[]>([]);
+	const [filteredExercises, setFilteredExercises] = useState<any[]>([]);
+	const [categories, setCategories] = useState<string[]>([]);
+	const [selectedCategory, setSelectedCategory] = useState<string>('all');
+	const [searchWorkout, setSearchWorkout] = useState('');
+	const [isLoadingWorkouts, setIsLoadingWorkouts] = useState(false);
+	const [selectedWorkouts, setSelectedWorkouts] = useState<
+		{
+			id: string;
+			name: string;
+			bodyPart: string;
+			target: string;
+			equipment?: string;
+			gifUrl: string;
+			sets: string;
+			reps: string;
+		}[]
+	>([]);
+
+	const apiKey =
+		(Constants?.expoConfig as any)?.extra?.exerciseDbApiKey ??
+		(Constants?.manifest as any)?.extra?.exerciseDbApiKey;
+
+	const buildExerciseImageUrl = useCallback(
+		(exerciseId: string) => {
+			if (!apiKey) return null;
+			return `https://exercisedb.p.rapidapi.com/image?exerciseId=${encodeURIComponent(
+				exerciseId
+			)}&resolution=360&rapidapi-key=${apiKey}`;
+		},
+		[apiKey]
+	);
+
+	const fetchExercisesByCategory = useCallback(
+		async (bodyPart: string) => {
+			if (!apiKey) return;
+			try {
+				setIsLoadingWorkouts(true);
+				let url: string;
+				if (bodyPart === 'all') {
+					url = 'https://exercisedb.p.rapidapi.com/exercises?limit=60&offset=0';
+				} else {
+					const encoded = encodeURIComponent(bodyPart);
+					url = `https://exercisedb.p.rapidapi.com/exercises/bodyPart/${encoded}?limit=60&offset=0`;
+				}
+
+				const response = await fetch(url, {
+					method: 'GET',
+					headers: {
+						'X-RapidAPI-Key': apiKey as string,
+						'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
+					},
+				});
+
+				if (!response.ok) {
+					throw new Error(`Failed to load workouts (${response.status})`);
+				}
+
+				const data = await response.json();
+				setExercises(data);
+				setFilteredExercises(data);
+			} catch (err: any) {
+				Alert.alert(
+					'Error',
+					err?.message ??
+						'Unable to load workouts right now. Please try again later.'
+				);
+			} finally {
+				setIsLoadingWorkouts(false);
+			}
+		},
+		[apiKey]
+	);
+
+	useEffect(() => {
+		if (!showWorkoutModal || !apiKey) return;
+
+		const fetchCategoriesAndInitialExercises = async () => {
+			try {
+				setIsLoadingWorkouts(true);
+				const categoriesResponse = await fetch(
+					'https://exercisedb.p.rapidapi.com/exercises/bodyPartList',
+					{
+						method: 'GET',
+						headers: {
+							'X-RapidAPI-Key': apiKey as string,
+							'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
+						},
+					}
+				);
+
+				if (!categoriesResponse.ok) {
+					throw new Error('Failed to load workout categories.');
+				}
+
+				const categoriesData = await categoriesResponse.json();
+				const normalizedCategories = categoriesData.map((c: string) =>
+					c.toLowerCase()
+				);
+				setCategories(normalizedCategories);
+				setSelectedCategory('all');
+				await fetchExercisesByCategory('all');
+			} catch (err: any) {
+				Alert.alert(
+					'Error',
+					err?.message ??
+						'Unable to load workouts right now. Please try again later.'
+				);
+			} finally {
+				setIsLoadingWorkouts(false);
+			}
+		};
+
+		void fetchCategoriesAndInitialExercises();
+	}, [showWorkoutModal, apiKey, fetchExercisesByCategory]);
+
+	useEffect(() => {
+		if (!showWorkoutModal) return;
+
+		const trimmed = searchWorkout.trim();
+		if (!trimmed) {
+			setFilteredExercises(exercises);
+			return;
+		}
+
+		const q = trimmed.toLowerCase();
+		setFilteredExercises(
+			exercises.filter(
+				(ex: any) =>
+					ex.name.toLowerCase().includes(q) ||
+					ex.bodyPart.toLowerCase().includes(q) ||
+					ex.target.toLowerCase().includes(q)
+			)
+		);
+	}, [searchWorkout, exercises, showWorkoutModal]);
 
 	const { data: sessionsData, refetch } = useQuery(GET_COACH_SESSIONS_QUERY, {
 		variables: { coachId: user?.id },
@@ -233,6 +377,40 @@ const CoachSchedule = () => {
 		setSelectedGoalId('');
 		setSelectedTemplateId('');
 		setErrors({});
+		setSelectedWorkouts([]);
+	};
+
+	const handleAddWorkout = (exercise: any) => {
+		const gifUrl = buildExerciseImageUrl(exercise.id) || '';
+		setSelectedWorkouts([
+			...selectedWorkouts,
+			{
+				id: exercise.id,
+				name: exercise.name,
+				bodyPart: exercise.bodyPart,
+				target: exercise.target,
+				equipment: exercise.equipment,
+				gifUrl,
+				sets: '3',
+				reps: '10',
+			},
+		]);
+	};
+
+	const handleRemoveWorkout = (index: number) => {
+		setSelectedWorkouts(selectedWorkouts.filter((_, i) => i !== index));
+	};
+
+	const handleUpdateWorkoutSets = (index: number, sets: string) => {
+		const updated = [...selectedWorkouts];
+		updated[index].sets = sets;
+		setSelectedWorkouts(updated);
+	};
+
+	const handleUpdateWorkoutReps = (index: number, reps: string) => {
+		const updated = [...selectedWorkouts];
+		updated[index].reps = reps;
+		setSelectedWorkouts(updated);
 	};
 
 	const validateForm = () => {
@@ -242,20 +420,20 @@ const CoachSchedule = () => {
 			if (!startTime) newErrors.startTime = 'Start time is required';
 			if (selectedClients.length === 0)
 				newErrors.clients = 'Select at least one client';
-			if (!selectedGoalId)
-				newErrors.goalId = 'A goal must be selected';
+			if (!selectedGoalId) newErrors.goalId = 'A goal must be selected';
 		} else if (isTemplate) {
-			if (!sessionName.trim()) newErrors.sessionName = 'Workout name is required';
+			if (!sessionName.trim())
+				newErrors.sessionName = 'Workout name is required';
 			if (!gymArea) newErrors.gymArea = 'Gym area is required';
 		} else {
-			if (!sessionName.trim()) newErrors.sessionName = 'Workout name is required';
+			if (!sessionName.trim())
+				newErrors.sessionName = 'Workout name is required';
 			if (!date) newErrors.date = 'Date is required';
 			if (!startTime) newErrors.startTime = 'Start time is required';
 			if (!gymArea) newErrors.gymArea = 'Gym area is required';
 			if (selectedClients.length === 0)
 				newErrors.clients = 'Select at least one client';
-			if (!selectedGoalId)
-				newErrors.goalId = 'A goal must be selected';
+			if (!selectedGoalId) newErrors.goalId = 'A goal must be selected';
 		}
 
 		setErrors(newErrors);
@@ -282,7 +460,10 @@ const CoachSchedule = () => {
 		if (selectedTemplateId) {
 			// Ensure goal is selected and belongs to one of the selected clients
 			if (!selectedGoalId) {
-				Alert.alert('Error', 'Please select a goal for one of the selected clients');
+				Alert.alert(
+					'Error',
+					'Please select a goal for one of the selected clients'
+				);
 				return;
 			}
 
@@ -293,29 +474,110 @@ const CoachSchedule = () => {
 				return;
 			}
 
-			const goalClientId = String(selectedGoal.clientId || selectedGoal.client?.id || '');
+			const goalClientId = String(
+				selectedGoal.clientId || selectedGoal.client?.id || ''
+			);
 			const isGoalForSelectedClient = selectedClients.some(
 				(clientId: string) => String(clientId) === goalClientId
 			);
 
 			if (!isGoalForSelectedClient) {
-				Alert.alert('Error', 'The selected goal must belong to one of the selected clients');
+				Alert.alert(
+					'Error',
+					'The selected goal must belong to one of the selected clients'
+				);
 				return;
 			}
+
+			// Validate date
+			if (!date) {
+				Alert.alert('Error', 'Date is required');
+				return;
+			}
+
+			// Validate startTime
+			if (!startTime) {
+				Alert.alert('Error', 'Start time is required');
+				return;
+			}
+
+			// Validate selectedClients
+			if (!selectedClients || selectedClients.length === 0) {
+				Alert.alert('Error', 'At least one client must be selected');
+				return;
+			}
+
+			// Prepare workout data for template with validation
+			let workoutData: string | undefined = undefined;
+			if (selectedWorkouts.length > 0) {
+				try {
+					const workoutArray = selectedWorkouts.map((w) => ({
+						id: String(w.id || ''),
+						name: String(w.name || ''),
+						bodyPart: String(w.bodyPart || ''),
+						target: String(w.target || ''),
+						equipment: w.equipment ? String(w.equipment) : undefined,
+						gifUrl: w.gifUrl ? String(w.gifUrl) : undefined,
+						sets: parseInt(String(w.sets || '0'), 10) || 0,
+						reps: parseInt(String(w.reps || '0'), 10) || 0,
+					}));
+					workoutData = JSON.stringify(workoutArray);
+					// Validate JSON is valid
+					JSON.parse(workoutData);
+				} catch {
+					Alert.alert(
+						'Error',
+						'Failed to prepare workout data. Please try again.'
+					);
+					return;
+				}
+			}
+
+			// Ensure all IDs are strings
+			const normalizedClientsIds = selectedClients.map((id: any) => String(id));
+			const normalizedTemplateId = String(selectedTemplateId);
+			const normalizedGoalId = String(selectedGoalId);
 
 			createSessionFromTemplate({
 				variables: {
 					input: {
-						templateId: selectedTemplateId,
-						clientsIds: selectedClients,
-						date: date?.toISOString(),
+						templateId: normalizedTemplateId,
+						clientsIds: normalizedClientsIds,
+						date: date.toISOString(),
 						startTime: startTimeString,
-						endTime: endTimeString,
-						goalId: selectedGoalId,
+						endTime: endTimeString || undefined,
+						goalId: normalizedGoalId,
+						workoutType: workoutData || undefined,
 					},
 				},
 			});
 			return;
+		}
+
+		// Prepare workout data with validation
+		let workoutData: string | undefined = undefined;
+		if (selectedWorkouts.length > 0) {
+			try {
+				const workoutArray = selectedWorkouts.map((w) => ({
+					id: String(w.id || ''),
+					name: String(w.name || ''),
+					bodyPart: String(w.bodyPart || ''),
+					target: String(w.target || ''),
+					equipment: w.equipment ? String(w.equipment) : undefined,
+					gifUrl: w.gifUrl ? String(w.gifUrl) : undefined,
+					sets: parseInt(String(w.sets || '0'), 10) || 0,
+					reps: parseInt(String(w.reps || '0'), 10) || 0,
+				}));
+				workoutData = JSON.stringify(workoutArray);
+				// Validate JSON is valid
+				JSON.parse(workoutData);
+			} catch {
+				Alert.alert(
+					'Error',
+					'Failed to prepare workout data. Please try again.'
+				);
+				return;
+			}
 		}
 
 		if (isTemplate) {
@@ -330,23 +592,39 @@ const CoachSchedule = () => {
 						note: note || undefined,
 						isTemplate: true,
 						goalId: selectedGoalId || undefined,
+						workoutType: workoutData || undefined,
 					},
 				},
 			});
 			return;
 		}
 
+		// Validate required fields for regular session
+		if (!date) {
+			Alert.alert('Error', 'Date is required');
+			return;
+		}
+
+		if (!startTime) {
+			Alert.alert('Error', 'Start time is required');
+			return;
+		}
+
+		// Normalize client IDs
+		const normalizedClientsIds = selectedClients.map((id: any) => String(id));
+
 		createSession({
 			variables: {
 				input: {
-					clientsIds: selectedClients,
+					clientsIds: normalizedClientsIds,
 					name: sessionName.trim(),
-					date: date?.toISOString(),
+					date: date.toISOString(),
 					startTime: startTimeString,
-					endTime: endTimeString,
+					endTime: endTimeString || undefined,
 					gymArea,
 					note: note || undefined,
 					goalId: selectedGoalId || undefined,
+					workoutType: workoutData || undefined,
 				},
 			},
 		});
@@ -370,9 +648,7 @@ const CoachSchedule = () => {
 	const goals = goalsData?.getAllClientGoals || [];
 	const templates = templatesData?.getSessionTemplates || [];
 	const unassignedGoals = goals.filter((goal: any) => !goal.coachId);
-	const myGoals = goals.filter(
-		(goal: any) => goal.coachId === user?.id
-	);
+	const myGoals = goals.filter((goal: any) => goal.coachId === user?.id);
 
 	// Get goals for selected clients - only show goals where coach is assigned (myGoals)
 	// and that belong to the selected clients
@@ -381,27 +657,29 @@ const CoachSchedule = () => {
 			// If no clients selected, show all assigned goals
 			return myGoals;
 		}
-		
+
 		// Normalize selected client IDs to strings for comparison
-		const normalizedSelectedClients = selectedClients.map((id: string) => String(id));
-		
+		const normalizedSelectedClients = selectedClients.map((id: string) =>
+			String(id)
+		);
+
 		// Filter goals to only show those for selected clients where coach is assigned
 		return myGoals.filter((goal: any) => {
 			// Get the client ID from the goal - handle both clientId field and client object
 			// The GraphQL query returns both clientId and client.id, so check both
 			let goalClientId: string | null = null;
-			
+
 			if (goal.clientId) {
 				goalClientId = String(goal.clientId);
 			} else if (goal.client?.id) {
 				goalClientId = String(goal.client.id);
 			}
-			
+
 			if (!goalClientId) {
 				// If we can't find the client ID, skip this goal
 				return false;
 			}
-			
+
 			// Check if this goal's client is in the selected clients list
 			return normalizedSelectedClients.includes(goalClientId);
 		});
@@ -415,10 +693,17 @@ const CoachSchedule = () => {
 				contentContainerClassName='p-5'
 				showsVerticalScrollIndicator={false}
 				refreshControl={
-					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor='#F9C513' />
+					<RefreshControl
+						refreshing={refreshing}
+						onRefresh={onRefresh}
+						tintColor='#F9C513'
+					/>
 				}
 			>
-				<View className='flex-row justify-between items-center mb-6 pb-4 border-b border-[#F9C513]' style={{ borderBottomWidth: 0.5 }}>
+				<View
+					className='flex-row justify-between items-center mb-6 pb-4 border-b border-[#F9C513]'
+					style={{ borderBottomWidth: 0.5 }}
+				>
 					<Text className='text-3xl font-bold text-text-primary'>Schedule</Text>
 					<View className='flex-row gap-2'>
 						<TouchableOpacity
@@ -452,7 +737,10 @@ const CoachSchedule = () => {
 							keyExtractor={(item) => item.id}
 							scrollEnabled={false}
 							renderItem={({ item }) => (
-								<View className='bg-bg-primary rounded-xl p-4 mb-3 border border-[#F9C513]' style={{ borderWidth: 0.5 }}>
+								<View
+									className='bg-bg-primary rounded-xl p-4 mb-3 border border-[#F9C513]'
+									style={{ borderWidth: 0.5 }}
+								>
 									<Text className='text-text-primary font-semibold text-base mb-1'>
 										{item.title}
 									</Text>
@@ -489,7 +777,10 @@ const CoachSchedule = () => {
 								keyExtractor={(item) => item.id}
 								scrollEnabled={false}
 								renderItem={({ item }) => (
-									<View className='bg-bg-primary rounded-xl p-4 mb-3 flex-row items-center border border-[#F9C513]' style={{ borderWidth: 0.5 }}>
+									<View
+										className='bg-bg-primary rounded-xl p-4 mb-3 flex-row items-center border border-[#F9C513]'
+										style={{ borderWidth: 0.5 }}
+									>
 										<View className='flex-1'>
 											<Text className='text-text-primary font-semibold text-base mb-1'>
 												{item.name}
@@ -530,8 +821,13 @@ const CoachSchedule = () => {
 							</Text>
 						</TouchableOpacity>
 					</View>
-					{sessions.filter((s: any) => !s.isTemplate && s.status !== 'cancelled').length === 0 ? (
-						<View className='bg-bg-primary rounded-xl p-6 items-center border border-[#F9C513]' style={{ borderWidth: 0.5 }}>
+					{sessions.filter(
+						(s: any) => !s.isTemplate && s.status !== 'cancelled'
+					).length === 0 ? (
+						<View
+							className='bg-bg-primary rounded-xl p-6 items-center border border-[#F9C513]'
+							style={{ borderWidth: 0.5 }}
+						>
 							<Ionicons name='calendar-outline' size={48} color='#8E8E93' />
 							<Text className='text-text-secondary mt-2 text-center'>
 								No upcoming sessions
@@ -539,12 +835,20 @@ const CoachSchedule = () => {
 						</View>
 					) : (
 						<FlatList
-							data={sessions.filter((s: any) => !s.isTemplate && s.status !== 'cancelled').slice(0, 5)}
+							data={sessions
+								.filter((s: any) => !s.isTemplate && s.status !== 'cancelled')
+								.slice(0, 5)}
 							keyExtractor={(item) => item.id}
 							scrollEnabled={false}
 							renderItem={({ item }) => (
-								<View className='bg-bg-primary rounded-xl p-4 mb-3 flex-row border border-[#F9C513]' style={{ borderWidth: 0.5 }}>
-									<View className='bg-bg-darker rounded-lg p-3 mr-3 items-center justify-center min-w-[80] border border-[#F9C513]' style={{ borderWidth: 0.5 }}>
+								<View
+									className='bg-bg-primary rounded-xl p-4 mb-3 flex-row border border-[#F9C513]'
+									style={{ borderWidth: 0.5 }}
+								>
+									<View
+										className='bg-bg-darker rounded-lg p-3 mr-3 items-center justify-center min-w-[80] border border-[#F9C513]'
+										style={{ borderWidth: 0.5 }}
+									>
 										<Text className='text-[#F9C513] font-bold text-lg'>
 											{formatTimeTo12Hour(item.startTime)}
 										</Text>
@@ -621,7 +925,10 @@ const CoachSchedule = () => {
 				onRequestClose={() => setShowGoalsModal(false)}
 			>
 				<View className='flex-1 bg-bg-darker justify-end'>
-					<View className='bg-bg-primary rounded-t-3xl p-5 max-h-[90%] border-t border-[#F9C513]' style={{ borderTopWidth: 0.5 }}>
+					<View
+						className='bg-bg-primary rounded-t-3xl p-5 max-h-[90%] border-t border-[#F9C513]'
+						style={{ borderTopWidth: 0.5 }}
+					>
 						<ScrollView showsVerticalScrollIndicator={false}>
 							<View className='flex-row justify-between items-center mb-6'>
 								<Text className='text-2xl font-bold text-text-primary'>
@@ -633,7 +940,10 @@ const CoachSchedule = () => {
 							</View>
 
 							{goals.length === 0 ? (
-								<View className='items-center py-10 border border-[#F9C513] rounded-xl' style={{ borderWidth: 0.5 }}>
+								<View
+									className='items-center py-10 border border-[#F9C513] rounded-xl'
+									style={{ borderWidth: 0.5 }}
+								>
 									<Ionicons name='flag-outline' size={48} color='#8E8E93' />
 									<Text className='text-text-secondary mt-4 text-center'>
 										No goals available
@@ -651,7 +961,10 @@ const CoachSchedule = () => {
 												keyExtractor={(item) => item.id}
 												scrollEnabled={false}
 												renderItem={({ item }) => (
-													<View className='bg-bg-darker rounded-xl p-4 mb-3 border border-[#F9C513]' style={{ borderWidth: 0.5 }}>
+													<View
+														className='bg-bg-darker rounded-xl p-4 mb-3 border border-[#F9C513]'
+														style={{ borderWidth: 0.5 }}
+													>
 														<Text className='text-text-primary font-semibold text-base mb-2'>
 															{item.title}
 														</Text>
@@ -688,7 +1001,10 @@ const CoachSchedule = () => {
 												keyExtractor={(item) => item.id}
 												scrollEnabled={false}
 												renderItem={({ item }) => (
-													<View className='bg-bg-darker rounded-xl p-4 mb-3 border border-[#F9C513]' style={{ borderWidth: 0.5 }}>
+													<View
+														className='bg-bg-darker rounded-xl p-4 mb-3 border border-[#F9C513]'
+														style={{ borderWidth: 0.5 }}
+													>
 														<Text className='text-text-primary font-semibold text-base mb-2'>
 															{item.title}
 														</Text>
@@ -718,7 +1034,10 @@ const CoachSchedule = () => {
 				onRequestClose={() => setShowTemplatesModal(false)}
 			>
 				<View className='flex-1 bg-bg-darker justify-end'>
-					<View className='bg-bg-primary rounded-t-3xl p-5 max-h-[90%] border-t border-[#F9C513]' style={{ borderTopWidth: 0.5 }}>
+					<View
+						className='bg-bg-primary rounded-t-3xl p-5 max-h-[90%] border-t border-[#F9C513]'
+						style={{ borderTopWidth: 0.5 }}
+					>
 						<ScrollView showsVerticalScrollIndicator={false}>
 							<View className='flex-row justify-between items-center mb-6'>
 								<Text className='text-2xl font-bold text-text-primary'>
@@ -730,7 +1049,10 @@ const CoachSchedule = () => {
 							</View>
 
 							{templates.length === 0 ? (
-								<View className='items-center py-10 border border-[#F9C513] rounded-xl' style={{ borderWidth: 0.5 }}>
+								<View
+									className='items-center py-10 border border-[#F9C513] rounded-xl'
+									style={{ borderWidth: 0.5 }}
+								>
 									<Ionicons name='copy-outline' size={48} color='#8E8E93' />
 									<Text className='text-text-secondary mt-4 text-center'>
 										No templates yet
@@ -791,15 +1113,21 @@ const CoachSchedule = () => {
 				}}
 			>
 				<View className='flex-1 bg-bg-darker justify-end'>
-					<View className='bg-bg-primary rounded-t-3xl p-5 max-h-[90%] border-t border-[#F9C513]' style={{ borderTopWidth: 0.5 }}>
-						<ScrollView showsVerticalScrollIndicator={false}>
+					<View
+						className='bg-bg-primary rounded-t-3xl p-5 max-h-[90%] border-t border-[#F9C513]'
+						style={{ borderTopWidth: 0.5 }}
+					>
+						<ScrollView
+							showsVerticalScrollIndicator={false}
+							keyboardShouldPersistTaps='handled'
+						>
 							<View className='flex-row justify-between items-center mb-6'>
 								<Text className='text-2xl font-bold text-text-primary'>
 									{selectedTemplateId
 										? 'Schedule from Template'
 										: isTemplate
-										? 'Create Template'
-										: 'Create Session'}
+											? 'Create Template'
+											: 'Create Session'}
 								</Text>
 								<TouchableOpacity
 									onPress={() => {
@@ -836,9 +1164,13 @@ const CoachSchedule = () => {
 															// Clear goal if it was for this client
 															if (selectedGoalId) {
 																const goal = myGoals.find((g: any) => {
-																	const goalClientId = String(g.clientId || g.client?.id || '');
-																	return String(g.id) === String(selectedGoalId) && 
-																	       String(client.id) === goalClientId;
+																	const goalClientId = String(
+																		g.clientId || g.client?.id || ''
+																	);
+																	return (
+																		String(g.id) === String(selectedGoalId) &&
+																		String(client.id) === goalClientId
+																	);
 																});
 																if (goal) {
 																	setSelectedGoalId('');
@@ -847,7 +1179,10 @@ const CoachSchedule = () => {
 															}
 															setErrors({ ...errors, clients: '' });
 														} else {
-															setSelectedClients([...selectedClients, client.id]);
+															setSelectedClients([
+																...selectedClients,
+																client.id,
+															]);
 															setErrors({ ...errors, clients: '' });
 														}
 													}}
@@ -888,10 +1223,13 @@ const CoachSchedule = () => {
 												selectedClients.length === 0
 													? 'Select clients first to see their goals'
 													: availableGoals.length === 0
-													? 'No goals available for selected clients'
-													: 'Select a goal'
+														? 'No goals available for selected clients'
+														: 'Select a goal'
 											}
-											disabled={selectedClients.length === 0 || availableGoals.length === 0}
+											disabled={
+												selectedClients.length === 0 ||
+												availableGoals.length === 0
+											}
 											error={errors.goalId}
 										/>
 										{selectedClients.length === 0 && (
@@ -899,11 +1237,13 @@ const CoachSchedule = () => {
 												Select clients above to see their available goals
 											</Text>
 										)}
-										{selectedClients.length > 0 && availableGoals.length === 0 && (
-											<Text className='text-red-500 text-xs mt-1'>
-												No goals available for the selected clients. Please assign yourself to their goals first.
-											</Text>
-										)}
+										{selectedClients.length > 0 &&
+											availableGoals.length === 0 && (
+												<Text className='text-red-500 text-xs mt-1'>
+													No goals available for the selected clients. Please
+													assign yourself to their goals first.
+												</Text>
+											)}
 										{errors.goalId && (
 											<Text className='text-red-500 text-sm mt-1'>
 												{errors.goalId}
@@ -934,6 +1274,99 @@ const CoachSchedule = () => {
 											onChange={setEndTime}
 											placeholder='Select end time'
 										/>
+									</View>
+									<View className='mb-4 mt-4'>
+										<Text className='text-text-primary font-semibold mb-2'>
+											Workout Exercises
+										</Text>
+										<TouchableOpacity
+											onPress={() => {
+												console.log('Opening workout modal');
+												// Remember that create modal was open and close it
+												setWasCreateModalOpen(showCreateModal);
+												setShowCreateModal(false);
+												// Small delay to ensure modal closes before opening new one
+												setTimeout(() => {
+													setShowWorkoutModal(true);
+												}, 300);
+											}}
+											activeOpacity={0.7}
+											className='p-3 bg-bg-darker rounded-lg border border-[#F9C513]'
+											style={{ borderWidth: 0.5 }}
+										>
+											<View className='flex-row items-center justify-between'>
+												<View className='flex-row items-center'>
+													<Ionicons name='barbell' size={20} color='#F9C513' />
+													<Text className='text-text-primary ml-2'>
+														{selectedWorkouts.length > 0
+															? `${selectedWorkouts.length} exercise(s) selected`
+															: 'Add Workout Exercises'}
+													</Text>
+												</View>
+												<Ionicons
+													name='chevron-forward'
+													size={20}
+													color='#8E8E93'
+												/>
+											</View>
+										</TouchableOpacity>
+										{selectedWorkouts.length > 0 && (
+											<View className='mt-3'>
+												{selectedWorkouts.map((workout, index) => (
+													<View
+														key={index}
+														className='bg-bg-darker rounded-lg p-3 mb-2 border border-[#F9C513]'
+														style={{ borderWidth: 0.5 }}
+													>
+														<View className='flex-row items-center justify-between mb-2'>
+															<Text className='text-text-primary font-semibold flex-1'>
+																{workout.name}
+															</Text>
+															<TouchableOpacity
+																onPress={() => handleRemoveWorkout(index)}
+																className='ml-2'
+															>
+																<Ionicons
+																	name='close-circle'
+																	size={20}
+																	color='#FF3B30'
+																/>
+															</TouchableOpacity>
+														</View>
+														<View className='flex-row items-center gap-3 mt-2'>
+															<View className='flex-1'>
+																<Text className='text-text-secondary text-xs mb-1'>
+																	Sets
+																</Text>
+																<TextInput
+																	value={workout.sets}
+																	onChangeText={(text) =>
+																		handleUpdateWorkoutSets(index, text)
+																	}
+																	keyboardType='number-pad'
+																	className='bg-bg-primary rounded-lg p-2 text-text-primary border border-[#F9C513]'
+																	style={{ borderWidth: 0.5 }}
+																/>
+															</View>
+															<View className='flex-1'>
+																<Text className='text-text-secondary text-xs mb-1'>
+																	Reps
+																</Text>
+																<TextInput
+																	value={workout.reps}
+																	onChangeText={(text) =>
+																		handleUpdateWorkoutReps(index, text)
+																	}
+																	keyboardType='number-pad'
+																	className='bg-bg-primary rounded-lg p-2 text-text-primary border border-[#F9C513]'
+																	style={{ borderWidth: 0.5 }}
+																/>
+															</View>
+														</View>
+													</View>
+												))}
+											</View>
+										)}
 									</View>
 									<GradientButton
 										onPress={handleCreateSession}
@@ -977,10 +1410,13 @@ const CoachSchedule = () => {
 													selectedClients.length === 0
 														? 'Select clients first to see their goals'
 														: availableGoals.length === 0
-														? 'No goals available for selected clients'
-														: 'Select a goal'
+															? 'No goals available for selected clients'
+															: 'Select a goal'
 												}
-												disabled={selectedClients.length === 0 || availableGoals.length === 0}
+												disabled={
+													selectedClients.length === 0 ||
+													availableGoals.length === 0
+												}
 												error={errors.goalId}
 											/>
 											{selectedClients.length === 0 && (
@@ -988,11 +1424,13 @@ const CoachSchedule = () => {
 													Select clients above to see their available goals
 												</Text>
 											)}
-											{selectedClients.length > 0 && availableGoals.length === 0 && (
-												<Text className='text-red-500 text-xs mt-1'>
-													No goals available for the selected clients. Please assign yourself to their goals first.
-												</Text>
-											)}
+											{selectedClients.length > 0 &&
+												availableGoals.length === 0 && (
+													<Text className='text-red-500 text-xs mt-1'>
+														No goals available for the selected clients. Please
+														assign yourself to their goals first.
+													</Text>
+												)}
 											{errors.goalId && (
 												<Text className='text-red-500 text-sm mt-1'>
 													{errors.goalId}
@@ -1054,6 +1492,100 @@ const CoachSchedule = () => {
 										error={errors.gymArea}
 									/>
 
+									<View className='mb-4 mt-4'>
+										<Text className='text-text-primary font-semibold mb-2'>
+											Workout Exercises
+										</Text>
+										<TouchableOpacity
+											onPress={() => {
+												console.log('Opening workout modal');
+												// Remember that create modal was open and close it
+												setWasCreateModalOpen(showCreateModal);
+												setShowCreateModal(false);
+												// Small delay to ensure modal closes before opening new one
+												setTimeout(() => {
+													setShowWorkoutModal(true);
+												}, 300);
+											}}
+											activeOpacity={0.7}
+											className='p-3 bg-bg-darker rounded-lg border border-[#F9C513]'
+											style={{ borderWidth: 0.5 }}
+										>
+											<View className='flex-row items-center justify-between'>
+												<View className='flex-row items-center'>
+													<Ionicons name='barbell' size={20} color='#F9C513' />
+													<Text className='text-text-primary ml-2'>
+														{selectedWorkouts.length > 0
+															? `${selectedWorkouts.length} exercise(s) selected`
+															: 'Add Workout Exercises'}
+													</Text>
+												</View>
+												<Ionicons
+													name='chevron-forward'
+													size={20}
+													color='#8E8E93'
+												/>
+											</View>
+										</TouchableOpacity>
+										{selectedWorkouts.length > 0 && (
+											<View className='mt-3'>
+												{selectedWorkouts.map((workout, index) => (
+													<View
+														key={index}
+														className='bg-bg-darker rounded-lg p-3 mb-2 border border-[#F9C513]'
+														style={{ borderWidth: 0.5 }}
+													>
+														<View className='flex-row items-center justify-between mb-2'>
+															<Text className='text-text-primary font-semibold flex-1'>
+																{workout.name}
+															</Text>
+															<TouchableOpacity
+																onPress={() => handleRemoveWorkout(index)}
+																className='ml-2'
+															>
+																<Ionicons
+																	name='close-circle'
+																	size={20}
+																	color='#FF3B30'
+																/>
+															</TouchableOpacity>
+														</View>
+														<View className='flex-row items-center gap-3 mt-2'>
+															<View className='flex-1'>
+																<Text className='text-text-secondary text-xs mb-1'>
+																	Sets
+																</Text>
+																<TextInput
+																	value={workout.sets}
+																	onChangeText={(text) =>
+																		handleUpdateWorkoutSets(index, text)
+																	}
+																	keyboardType='number-pad'
+																	className='bg-bg-primary rounded-lg p-2 text-text-primary border border-[#F9C513]'
+																	style={{ borderWidth: 0.5 }}
+																/>
+															</View>
+															<View className='flex-1'>
+																<Text className='text-text-secondary text-xs mb-1'>
+																	Reps
+																</Text>
+																<TextInput
+																	value={workout.reps}
+																	onChangeText={(text) =>
+																		handleUpdateWorkoutReps(index, text)
+																	}
+																	keyboardType='number-pad'
+																	className='bg-bg-primary rounded-lg p-2 text-text-primary border border-[#F9C513]'
+																	style={{ borderWidth: 0.5 }}
+																/>
+															</View>
+														</View>
+													</View>
+												))}
+											</View>
+										)}
+									</View>
+
 									{!isTemplate && (
 										<View className='mb-4'>
 											<Text className='text-text-primary font-semibold mb-2'>
@@ -1070,21 +1602,30 @@ const CoachSchedule = () => {
 														onPress={() => {
 															if (selectedClients.includes(client.id)) {
 																setSelectedClients(
-																	selectedClients.filter((id) => id !== client.id)
+																	selectedClients.filter(
+																		(id) => id !== client.id
+																	)
 																);
 																// Clear goal if it was for this client
 																if (selectedGoalId) {
 																	const goal = myGoals.find((g: any) => {
-																		const goalClientId = String(g.clientId || g.client?.id || '');
-																		return String(g.id) === String(selectedGoalId) && 
-																		       String(client.id) === goalClientId;
+																		const goalClientId = String(
+																			g.clientId || g.client?.id || ''
+																		);
+																		return (
+																			String(g.id) === String(selectedGoalId) &&
+																			String(client.id) === goalClientId
+																		);
 																	});
 																	if (goal) {
 																		setSelectedGoalId('');
 																	}
 																}
 															} else {
-																setSelectedClients([...selectedClients, client.id]);
+																setSelectedClients([
+																	...selectedClients,
+																	client.id,
+																]);
 															}
 														}}
 														className={`p-3 rounded-lg mb-2 border ${
@@ -1173,14 +1714,16 @@ const CoachSchedule = () => {
 								<View>
 									{sessionLogData.getSessionLogBySessionId.progressImages ? (
 										<View>
-											{sessionLogData.getSessionLogBySessionId.progressImages.front && (
+											{sessionLogData.getSessionLogBySessionId.progressImages
+												.front && (
 												<View className='mb-4'>
 													<Text className='text-text-primary font-semibold mb-2'>
 														Front
 													</Text>
 													<Image
 														source={{
-															uri: sessionLogData.getSessionLogBySessionId.progressImages.front,
+															uri: sessionLogData.getSessionLogBySessionId
+																.progressImages.front,
 														}}
 														style={{
 															width: '100%',
@@ -1193,14 +1736,16 @@ const CoachSchedule = () => {
 													/>
 												</View>
 											)}
-											{sessionLogData.getSessionLogBySessionId.progressImages.rightSide && (
+											{sessionLogData.getSessionLogBySessionId.progressImages
+												.rightSide && (
 												<View className='mb-4'>
 													<Text className='text-text-primary font-semibold mb-2'>
 														Right Side
 													</Text>
 													<Image
 														source={{
-															uri: sessionLogData.getSessionLogBySessionId.progressImages.rightSide,
+															uri: sessionLogData.getSessionLogBySessionId
+																.progressImages.rightSide,
 														}}
 														style={{
 															width: '100%',
@@ -1213,14 +1758,16 @@ const CoachSchedule = () => {
 													/>
 												</View>
 											)}
-											{sessionLogData.getSessionLogBySessionId.progressImages.leftSide && (
+											{sessionLogData.getSessionLogBySessionId.progressImages
+												.leftSide && (
 												<View className='mb-4'>
 													<Text className='text-text-primary font-semibold mb-2'>
 														Left Side
 													</Text>
 													<Image
 														source={{
-															uri: sessionLogData.getSessionLogBySessionId.progressImages.leftSide,
+															uri: sessionLogData.getSessionLogBySessionId
+																.progressImages.leftSide,
 														}}
 														style={{
 															width: '100%',
@@ -1233,14 +1780,16 @@ const CoachSchedule = () => {
 													/>
 												</View>
 											)}
-											{sessionLogData.getSessionLogBySessionId.progressImages.back && (
+											{sessionLogData.getSessionLogBySessionId.progressImages
+												.back && (
 												<View className='mb-4'>
 													<Text className='text-text-primary font-semibold mb-2'>
 														Back
 													</Text>
 													<Image
 														source={{
-															uri: sessionLogData.getSessionLogBySessionId.progressImages.back,
+															uri: sessionLogData.getSessionLogBySessionId
+																.progressImages.back,
 														}}
 														style={{
 															width: '100%',
@@ -1254,7 +1803,10 @@ const CoachSchedule = () => {
 												</View>
 											)}
 											{sessionLogData.getSessionLogBySessionId.weight && (
-												<View className='mb-4 p-4 bg-bg-darker rounded-xl border border-[#F9C513]' style={{ borderWidth: 0.5 }}>
+												<View
+													className='mb-4 p-4 bg-bg-darker rounded-xl border border-[#F9C513]'
+													style={{ borderWidth: 0.5 }}
+												>
 													<Text className='text-text-primary font-semibold mb-1'>
 														Weight
 													</Text>
@@ -1266,12 +1818,16 @@ const CoachSchedule = () => {
 										</View>
 									) : (
 										<View className='items-center py-10'>
-											<Ionicons name='images-outline' size={64} color='#8E8E93' />
+											<Ionicons
+												name='images-outline'
+												size={64}
+												color='#8E8E93'
+											/>
 											<Text className='text-text-secondary mt-4 text-center'>
 												No progress photos available yet
 											</Text>
 											<Text className='text-text-secondary text-sm mt-2 text-center'>
-												The client hasn't completed this session yet
+												The client hasn&apos;t completed this session yet
 											</Text>
 										</View>
 									)}
@@ -1282,6 +1838,278 @@ const CoachSchedule = () => {
 								</View>
 							)}
 						</ScrollView>
+					</View>
+				</View>
+			</Modal>
+
+			{/* Workout Selection Modal */}
+			<Modal
+				visible={showWorkoutModal}
+				animationType='slide'
+				transparent={true}
+				statusBarTranslucent={true}
+				onRequestClose={() => {
+					setShowWorkoutModal(false);
+					// Reopen create modal if it was open before
+					if (wasCreateModalOpen) {
+						setTimeout(() => {
+							setShowCreateModal(true);
+							setWasCreateModalOpen(false);
+						}, 300);
+					}
+				}}
+			>
+				<View className='flex-1 bg-bg-darker justify-end'>
+					<View
+						className='bg-bg-primary rounded-t-3xl border-t border-[#F9C513]'
+						style={{ borderTopWidth: 0.5, maxHeight: '90%', minHeight: '85%' }}
+					>
+						<View className='p-5 pb-0'>
+							<View className='flex-row justify-between items-center mb-6'>
+								<Text className='text-2xl font-bold text-text-primary'>
+									Select Workout Exercises
+								</Text>
+								<TouchableOpacity
+									onPress={() => {
+										setShowWorkoutModal(false);
+										// Reopen create modal if it was open before
+										if (wasCreateModalOpen) {
+											setTimeout(() => {
+												setShowCreateModal(true);
+												setWasCreateModalOpen(false);
+											}, 300);
+										}
+									}}
+								>
+									<Ionicons name='close' size={28} color='#8E8E93' />
+								</TouchableOpacity>
+							</View>
+						</View>
+
+						<ScrollView
+							className='flex-1 px-5'
+							showsVerticalScrollIndicator={false}
+							contentContainerStyle={{ paddingBottom: 20 }}
+						>
+							{!apiKey ? (
+								<View className='items-center py-10'>
+									<Text className='text-text-secondary text-center'>
+										Missing ExerciseDB API key. Please configure it in app.json
+									</Text>
+								</View>
+							) : (
+								<>
+									<View className='mb-4'>
+										<TextInput
+											placeholder='Search by name, body part, or target muscle'
+											placeholderTextColor='#8E8E93'
+											value={searchWorkout}
+											onChangeText={setSearchWorkout}
+											className='bg-bg-darker rounded-lg p-3 text-text-primary border border-[#F9C513]'
+											style={{ borderWidth: 0.5 }}
+										/>
+									</View>
+
+									{categories.length > 0 && (
+										<View className='mb-4'>
+											<FlatList
+												data={['all', ...categories]}
+												keyExtractor={(item) => item}
+												horizontal
+												showsHorizontalScrollIndicator={false}
+												renderItem={({ item }) => {
+													const active = item === selectedCategory;
+													const label =
+														item === 'all'
+															? 'All workouts'
+															: item.replace(/(^\w|\s\w)/g, (m) =>
+																	m.toUpperCase()
+																);
+													return (
+														<TouchableOpacity
+															onPress={() => {
+																setSelectedCategory(item);
+																fetchExercisesByCategory(item);
+															}}
+															className={`px-4 py-2 rounded-full mr-2 border ${
+																active
+																	? 'bg-[#F9C513] border-[#F9C513]'
+																	: 'bg-bg-darker border-[#F9C513]'
+															}`}
+															style={{ borderWidth: 0.5 }}
+														>
+															<Text
+																className={`text-sm ${
+																	active
+																		? 'text-bg-darker font-semibold'
+																		: 'text-text-primary'
+																}`}
+															>
+																{label}
+															</Text>
+														</TouchableOpacity>
+													);
+												}}
+											/>
+										</View>
+									)}
+
+									{isLoadingWorkouts ? (
+										<View className='items-center py-10'>
+											<ActivityIndicator size='large' color='#F9C513' />
+											<Text className='text-text-secondary mt-4'>
+												Loading workouts...
+											</Text>
+										</View>
+									) : (
+										<View style={{ minHeight: 300 }}>
+											<FlatList
+												data={filteredExercises}
+												keyExtractor={(item) => item.id}
+												scrollEnabled={false}
+												renderItem={({ item }) => {
+													const isSelected = selectedWorkouts.some(
+														(w) => w.id === item.id
+													);
+													const gifUrl = buildExerciseImageUrl(item.id);
+													return (
+														<TouchableOpacity
+															onPress={() => {
+																if (isSelected) {
+																	setSelectedWorkouts(
+																		selectedWorkouts.filter(
+																			(w) => w.id !== item.id
+																		)
+																	);
+																} else {
+																	handleAddWorkout(item);
+																}
+															}}
+															className={`p-3 rounded-lg mb-3 border ${
+																isSelected
+																	? 'bg-[#F9C513]/20 border-[#F9C513]'
+																	: 'bg-bg-darker border-[#F9C513]'
+															}`}
+															style={{ borderWidth: 0.5 }}
+														>
+															<View className='flex-row items-center'>
+																{gifUrl && (
+																	<ExpoImage
+																		source={{ uri: gifUrl }}
+																		style={{
+																			width: 80,
+																			height: 80,
+																			borderRadius: 8,
+																			marginRight: 12,
+																		}}
+																		contentFit='cover'
+																	/>
+																)}
+																<View className='flex-1'>
+																	<Text className='text-text-primary font-semibold text-base mb-1'>
+																		{item.name}
+																	</Text>
+																	<Text className='text-text-secondary text-sm'>
+																		{item.bodyPart} • {item.target}
+																	</Text>
+																	{item.equipment && (
+																		<Text className='text-text-secondary text-xs mt-1'>
+																			Equipment: {item.equipment}
+																		</Text>
+																	)}
+																</View>
+																{isSelected && (
+																	<Ionicons
+																		name='checkmark-circle'
+																		size={24}
+																		color='#F9C513'
+																	/>
+																)}
+															</View>
+														</TouchableOpacity>
+													);
+												}}
+												ListEmptyComponent={
+													<View
+														className='items-center justify-center'
+														style={{ minHeight: 300 }}
+													>
+														<Text className='text-text-secondary text-center'>
+															No workouts found. Try a different search term.
+														</Text>
+													</View>
+												}
+											/>
+										</View>
+									)}
+
+									{selectedWorkouts.length > 0 && (
+										<View
+											className='mt-4 pt-4 border-t border-[#F9C513]'
+											style={{ borderTopWidth: 0.5 }}
+										>
+											<Text className='text-text-primary font-semibold mb-3'>
+												Selected Exercises ({selectedWorkouts.length})
+											</Text>
+											<ScrollView
+												horizontal
+												showsHorizontalScrollIndicator={false}
+											>
+												{selectedWorkouts.map((workout, index) => (
+													<View
+														key={index}
+														className='bg-bg-darker rounded-lg p-3 mr-2 border border-[#F9C513]'
+														style={{ borderWidth: 0.5, minWidth: 120 }}
+													>
+														{workout.gifUrl && (
+															<ExpoImage
+																source={{ uri: workout.gifUrl }}
+																style={{
+																	width: 100,
+																	height: 100,
+																	borderRadius: 8,
+																	marginBottom: 8,
+																}}
+																contentFit='cover'
+															/>
+														)}
+														<Text
+															className='text-text-primary font-semibold text-xs mb-2'
+															numberOfLines={2}
+														>
+															{workout.name}
+														</Text>
+														<Text className='text-[#F9C513] text-xs'>
+															{workout.sets} sets × {workout.reps} reps
+														</Text>
+													</View>
+												))}
+											</ScrollView>
+										</View>
+									)}
+								</>
+							)}
+						</ScrollView>
+
+						<View
+							className='p-5 pt-4 border-t border-[#F9C513]'
+							style={{ borderTopWidth: 0.5 }}
+						>
+							<GradientButton
+								onPress={() => {
+									setShowWorkoutModal(false);
+									// Reopen create modal if it was open before
+									if (wasCreateModalOpen) {
+										setTimeout(() => {
+											setShowCreateModal(true);
+											setWasCreateModalOpen(false);
+										}, 300);
+									}
+								}}
+							>
+								Done
+							</GradientButton>
+						</View>
 					</View>
 				</View>
 			</Modal>

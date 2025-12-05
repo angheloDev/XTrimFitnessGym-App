@@ -34,7 +34,7 @@ const getApiUrl = () => {
 		} else {
 			// For physical devices, user should set this in app.json
 			// Default fallback - UPDATE THIS WITH YOUR COMPUTER'S IP ADDRESS
-			const apiUrl = 'http://192.168.1.54:8000/graphql'; // ⚠️ UPDATE THIS!
+			const apiUrl = 'http://192.168.1.71:8000/graphql'; // ⚠️ UPDATE THIS!
 			console.warn(
 				'⚠️ Physical device detected. Please update the API URL in app.json (extra.apiUrl) with your computer IP'
 			);
