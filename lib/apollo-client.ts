@@ -1,3 +1,4 @@
+import { storage } from '@/utils/storage';
 import {
 	ApolloClient,
 	InMemoryCache,
@@ -8,7 +9,6 @@ import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
-import { storage } from '@/utils/storage';
 
 // Get the API URL based on the platform and environment
 const getApiUrl = () => {
@@ -34,7 +34,7 @@ const getApiUrl = () => {
 		} else {
 			// For physical devices, user should set this in app.json
 			// Default fallback - UPDATE THIS WITH YOUR COMPUTER'S IP ADDRESS
-			const apiUrl = 'http://192.168.1.71:8000/graphql'; // ⚠️ UPDATE THIS!
+			const apiUrl = 'http://192.168.1.54:8000/graphql'; // ⚠️ UPDATE THIS!
 			console.warn(
 				'⚠️ Physical device detected. Please update the API URL in app.json (extra.apiUrl) with your computer IP'
 			);
@@ -57,9 +57,11 @@ const authLink = setContext(async (_, { headers }) => {
 	// Get token from AsyncStorage (fallback if cookies don't work in React Native)
 	try {
 		const token = await storage.getItem('auth_token');
-		
+
 		if (token) {
-			console.log('✅ [Apollo Client] Token found in AsyncStorage, adding to Authorization header');
+			console.log(
+				'✅ [Apollo Client] Token found in AsyncStorage, adding to Authorization header'
+			);
 			return {
 				headers: {
 					...headers,
@@ -70,9 +72,12 @@ const authLink = setContext(async (_, { headers }) => {
 			console.warn('⚠️ [Apollo Client] No token found in AsyncStorage');
 		}
 	} catch (error) {
-		console.error('❌ [Apollo Client] Error retrieving token from AsyncStorage:', error);
+		console.error(
+			'❌ [Apollo Client] Error retrieving token from AsyncStorage:',
+			error
+		);
 	}
-	
+
 	return {
 		headers: {
 			...headers,
