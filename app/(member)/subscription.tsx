@@ -64,7 +64,7 @@ const MemberSubscription = () => {
 		refetch: refetchRequests,
 	} = useQuery(GET_MY_SUBSCRIPTION_REQUESTS_QUERY, {
 		fetchPolicy: 'cache-and-network',
-		pollInterval: 3000, // Poll every 3 seconds to check for approval/expiration
+		pollInterval: 5000, // Poll every 5 seconds to check for approval
 	});
 
 	const [createSubscriptionRequest, { loading: requesting }] = useMutation(
@@ -76,7 +76,7 @@ const MemberSubscription = () => {
 				refetchRequests();
 				Alert.alert(
 					'Request Sent',
-					'Your subscription request has been sent to the admin. It will expire in 1 minute if not approved.',
+					'Your subscription request has been sent to the admin for approval. You will be notified once it is processed.',
 					[
 						{
 							text: 'OK',
@@ -117,23 +117,10 @@ const MemberSubscription = () => {
 		return subscriptionRequests.find(
 			(req: any) =>
 				req.membershipId === membershipId &&
-				(req.status === 'PENDING' || req.status === 'EXPIRED')
+				req.status === 'PENDING'
 		);
 	};
 
-	// Check if request is expired
-	const isRequestExpired = (expiresAt: string) => {
-		return new Date(expiresAt) < new Date();
-	};
-
-	// Get time remaining for pending request
-	const getTimeRemaining = (expiresAt: string) => {
-		const now = new Date();
-		const expires = new Date(expiresAt);
-		const diff = expires.getTime() - now.getTime();
-		if (diff <= 0) return 0;
-		return Math.ceil(diff / 1000); // seconds
-	};
 
 	const calculateDaysRemaining = (expiresAt: string) => {
 		const expiry = new Date(expiresAt);
@@ -455,17 +442,10 @@ const MemberSubscription = () => {
 												)}
 											{(() => {
 												const pendingRequest = getPendingRequest(membership.id);
-												const isExpired =
-													pendingRequest &&
-													isRequestExpired(pendingRequest.expiresAt);
-												const timeRemaining = pendingRequest
-													? getTimeRemaining(pendingRequest.expiresAt)
-													: 0;
 
 												if (
 													pendingRequest &&
-													pendingRequest.status === 'PENDING' &&
-													!isExpired
+													pendingRequest.status === 'PENDING'
 												) {
 													return (
 														<View className='mt-2'>
@@ -481,8 +461,7 @@ const MemberSubscription = () => {
 																	</Text>
 																</View>
 																<Text className='text-text-secondary text-xs text-center'>
-																	Expires in {timeRemaining}s - Waiting for
-																	admin approval
+																	Waiting for admin approval
 																</Text>
 															</View>
 														</View>
@@ -491,7 +470,7 @@ const MemberSubscription = () => {
 
 												if (
 													pendingRequest &&
-													(isExpired || pendingRequest.status === 'EXPIRED')
+													pendingRequest.status === 'REJECTED'
 												) {
 													return (
 														<View className='mt-2'>
@@ -503,18 +482,18 @@ const MemberSubscription = () => {
 																		color='#EF4444'
 																	/>
 																	<Text className='text-red-400 font-semibold ml-2'>
-																		Request Expired
+																		Request Rejected
 																	</Text>
 																</View>
 																<Text className='text-text-secondary text-xs text-center mb-2'>
-																	Your request expired. You can resend it.
+																	Your request was rejected. You can submit a new request.
 																</Text>
 															</View>
 															<GradientButton
 																onPress={() => handlePurchase(membership)}
 																className='mt-2'
 															>
-																Resend Request
+																Submit New Request
 															</GradientButton>
 														</View>
 													);
@@ -648,17 +627,10 @@ const MemberSubscription = () => {
 
 									{(() => {
 										const pendingRequest = getPendingRequest(membership.id);
-										const isExpired =
-											pendingRequest &&
-											isRequestExpired(pendingRequest.expiresAt);
-										const timeRemaining = pendingRequest
-											? getTimeRemaining(pendingRequest.expiresAt)
-											: 0;
 
 										if (
 											pendingRequest &&
-											pendingRequest.status === 'PENDING' &&
-											!isExpired
+											pendingRequest.status === 'PENDING'
 										) {
 											return (
 												<View className='mt-2'>
@@ -674,8 +646,7 @@ const MemberSubscription = () => {
 															</Text>
 														</View>
 														<Text className='text-text-secondary text-xs text-center'>
-															Expires in {timeRemaining}s - Waiting for admin
-															approval
+															Waiting for admin approval
 														</Text>
 													</View>
 												</View>
@@ -684,7 +655,7 @@ const MemberSubscription = () => {
 
 										if (
 											pendingRequest &&
-											(isExpired || pendingRequest.status === 'EXPIRED')
+											pendingRequest.status === 'REJECTED'
 										) {
 											return (
 												<View className='mt-2'>
@@ -696,18 +667,18 @@ const MemberSubscription = () => {
 																color='#EF4444'
 															/>
 															<Text className='text-red-400 font-semibold ml-2'>
-																Request Expired
+																Request Rejected
 															</Text>
 														</View>
 														<Text className='text-text-secondary text-xs text-center mb-2'>
-															Your request expired. You can resend it.
+															Your request was rejected. You can submit a new request.
 														</Text>
 													</View>
 													<GradientButton
 														onPress={() => handlePurchase(membership)}
 														className='mt-2'
 													>
-														Resend Request
+														Submit New Request
 													</GradientButton>
 												</View>
 											);
@@ -791,9 +762,7 @@ const MemberSubscription = () => {
 								</Text>
 							</View>
 							<Text className='text-text-secondary text-sm'>
-								Your request will be sent to the admin for approval. It will
-								expire in 1 minute if not approved. You can resend the request
-								if it expires.
+								Your request will be sent to the admin for approval. You will be notified once your request is processed.
 							</Text>
 						</View>
 						{selectedMembership && (

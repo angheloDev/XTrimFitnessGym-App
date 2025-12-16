@@ -192,6 +192,7 @@ export const GET_CURRENT_MEMBERSHIP_QUERY = gql`
 				description
 				features
 				durationType
+				monthDuration
 			}
 			priceAtPurchase
 			startedAt
@@ -526,6 +527,7 @@ export const GET_MEMBERSHIPS_QUERY = gql`
 			features
 			status
 			durationType
+			monthDuration
 		}
 	}
 `;
@@ -540,6 +542,7 @@ export const GET_MEMBERSHIP_QUERY = gql`
 			features
 			status
 			durationType
+			monthDuration
 		}
 	}
 `;
@@ -709,10 +712,10 @@ export const GET_MY_SUBSCRIPTION_REQUESTS_QUERY = gql`
 				description
 				features
 				durationType
+				monthDuration
 			}
 			status
 			requestedAt
-			expiresAt
 			approvedAt
 			rejectedAt
 			createdAt
@@ -724,5 +727,25 @@ export const GET_MY_SUBSCRIPTION_REQUESTS_QUERY = gql`
 export const GET_FITNESS_GOAL_TYPES_QUERY = gql`
 	query GetFitnessGoalTypes {
 		getFitnessGoalTypes
+	}
+`;
+
+export const GET_ATTENDANCE_RECORDS_QUERY = gql`
+	query GetAttendanceRecords($filter: AttendanceFilter, $pagination: AttendancePagination) {
+		getAttendanceRecords(filter: $filter, pagination: $pagination) {
+			records {
+				id
+				authDateTime
+				authDate
+				authTime
+				direction
+				deviceName
+				deviceSerNum
+				personName
+				cardNo
+			}
+			totalCount
+			hasMore
+		}
 	}
 `;

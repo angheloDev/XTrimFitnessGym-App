@@ -30,18 +30,42 @@ import {
 	View,
 } from 'react-native';
 
+// Get the API base URL (without /graphql) for image uploads
+// This should match the same logic as apollo-client.ts
 const getApiUrl = () => {
 	if (__DEV__) {
-		const apiUrl = Constants.expoConfig?.extra?.apiUrl;
-		if (apiUrl) {
-			return apiUrl.replace('/graphql', '');
-		}
+		// Get API URL from app.json (if configured)
+		const configApiUrl = Constants.expoConfig?.extra?.apiUrl;
+		
+		// Platform-specific URL logic
 		if (Platform.OS === 'android') {
+			// If apiUrl is configured in app.json, use it (for physical devices)
+			if (configApiUrl) {
+				return configApiUrl.replace('/graphql', '');
+			}
+			// Android Emulator uses 10.0.2.2 to access host machine's localhost
 			return 'http://10.0.2.2:8000';
 		} else if (Platform.OS === 'ios') {
+			// If apiUrl is configured in app.json, use it (for physical devices)
+			if (configApiUrl) {
+				return configApiUrl.replace('/graphql', '');
+			}
+			// iOS Simulator can use localhost directly
 			return 'http://localhost:8000';
+		} else if (Platform.OS === 'web') {
+			// Web platform - prefer config URL, fallback to localhost
+			if (configApiUrl) {
+				return configApiUrl.replace('/graphql', '');
+			}
+			return 'http://localhost:8000';
+		} else {
+			// Unknown platform - use config URL or fallback
+			if (configApiUrl) {
+				return configApiUrl.replace('/graphql', '');
+			}
+			// Fallback - this should ideally be set in app.json
+			return 'http://192.168.254.237:8000';
 		}
-		return 'http://192.168.1.71:8000';
 	}
 	return 'https://your-production-api.com';
 };

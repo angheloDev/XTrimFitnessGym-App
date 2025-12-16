@@ -700,30 +700,35 @@ const CoachSchedule = () => {
 					/>
 				}
 			>
-				<View
-					className='flex-row justify-between items-center mb-6 pb-4 border-b border-[#F9C513]'
-					style={{ borderBottomWidth: 0.5 }}
-				>
-					<Text className='text-3xl font-bold text-text-primary'>Schedule</Text>
-					<View className='flex-row gap-2'>
-						<TouchableOpacity
-							onPress={() => setShowGoalsModal(true)}
-							className='bg-[#F9C513] rounded-lg px-3 py-2 items-center justify-center min-w-[44] min-h-[44] border border-[#1C1C1E]/20'
-						>
-							<Ionicons name='flag' size={20} color='#1C1C1E' />
-						</TouchableOpacity>
-						<TouchableOpacity
-							onPress={() => setShowTemplatesModal(true)}
-							className='bg-[#F9C513] rounded-lg px-3 py-2 items-center justify-center min-w-[44] min-h-[44] border border-[#1C1C1E]/20'
-						>
-							<Ionicons name='copy' size={20} color='#1C1C1E' />
-						</TouchableOpacity>
+				<View className='mb-6 pb-4 border-b border-[#F9C513]' style={{ borderBottomWidth: 0.5 }}>
+					<View className='flex-row justify-between items-center mb-4'>
+						<Text className='text-3xl font-bold text-text-primary'>Schedule</Text>
 						<GradientButton
 							onPress={() => setShowCreateModal(true)}
 							className='px-4 py-2 h-17 w-30'
 						>
 							<Ionicons name='add' size={30} color='#fff' />
 						</GradientButton>
+					</View>
+					<View className='flex-row gap-2'>
+						<TouchableOpacity
+							onPress={() => setShowGoalsModal(true)}
+							className='flex-1 bg-[#F9C513] rounded-lg px-3 py-2 flex-row items-center justify-center min-h-[44] border border-[#1C1C1E]/20'
+						>
+							<Ionicons name='flag' size={18} color='#1C1C1E' />
+							<Text className='text-bg-darker font-semibold ml-2 text-sm'>
+								Goals
+							</Text>
+						</TouchableOpacity>
+						<TouchableOpacity
+							onPress={() => setShowTemplatesModal(true)}
+							className='flex-1 bg-[#F9C513] rounded-lg px-3 py-2 flex-row items-center justify-center min-h-[44] border border-[#1C1C1E]/20'
+						>
+							<Ionicons name='copy' size={18} color='#1C1C1E' />
+							<Text className='text-bg-darker font-semibold ml-2 text-sm'>
+								Templates
+							</Text>
+						</TouchableOpacity>
 					</View>
 				</View>
 
@@ -807,20 +812,18 @@ const CoachSchedule = () => {
 				)}
 
 				<View className='mb-4'>
-					<View className='flex-row justify-between items-center mb-4'>
-						<Text className='text-xl font-semibold text-text-primary'>
-							Upcoming Sessions
+					<Text className='text-xl font-semibold text-text-primary mb-4'>
+						Upcoming Sessions
+					</Text>
+					<TouchableOpacity
+						onPress={() => router.push('/(coach)/completed-sessions')}
+						className='bg-[#F9C513] rounded-lg px-3 py-2 flex-row items-center justify-center min-h-[44] border border-[#1C1C1E]/20 mb-4'
+					>
+						<Ionicons name='checkmark-circle' size={18} color='#1C1C1E' />
+						<Text className='text-bg-darker font-semibold ml-2 text-sm'>
+							Completed Sessions
 						</Text>
-						<TouchableOpacity
-							onPress={() => router.push('/(coach)/completed-sessions')}
-							className='flex-row items-center'
-						>
-							<Ionicons name='checkmark-circle' size={20} color='#F9C513' />
-							<Text className='text-[#F9C513] font-semibold ml-2'>
-								Completed Sessions
-							</Text>
-						</TouchableOpacity>
-					</View>
+					</TouchableOpacity>
 					{sessions.filter(
 						(s: any) => !s.isTemplate && s.status !== 'cancelled'
 					).length === 0 ? (

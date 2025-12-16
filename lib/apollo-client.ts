@@ -13,35 +13,68 @@ import { Platform } from 'react-native';
 // Get the API URL based on the platform and environment
 const getApiUrl = () => {
 	if (__DEV__) {
-		// Check if API URL is configured in app.json (recommended for physical devices)
-		const apiUrl = Constants.expoConfig?.extra?.apiUrl;
-		if (apiUrl) {
-			console.log('✅ Using API URL from app.json:', apiUrl);
-			return apiUrl;
-		}
+		// Get API URL from app.json (if configured)
+		// This is useful for physical devices that need the actual IP address
+		const configApiUrl = Constants.expoConfig?.extra?.apiUrl;
 
-		// Platform-specific URLs
+		// Platform-specific URL logic
 		if (Platform.OS === 'android') {
+			// If apiUrl is configured in app.json, use it (for physical devices)
+			// Otherwise, use 10.0.2.2 for Android emulator
+			if (configApiUrl) {
+				console.log('✅ [Android] Using API URL from app.json:', configApiUrl);
+				console.log('   (Physical device or custom configuration)');
+				return configApiUrl;
+			}
 			// Android Emulator uses 10.0.2.2 to access host machine's localhost
+			// This is a special IP that Android emulator uses to reach the host
 			const apiUrl = 'http://10.0.2.2:8000/graphql';
-			console.log('✅ Using Android emulator API URL:', apiUrl);
+			console.log('✅ [Android] Using emulator API URL:', apiUrl);
+			console.log('   (For physical devices, set apiUrl in app.json)');
 			return apiUrl;
 		} else if (Platform.OS === 'ios') {
-			// iOS Simulator can use localhost
+			// If apiUrl is configured in app.json, use it (for physical devices)
+			// Otherwise, use localhost for iOS simulator
+			if (configApiUrl) {
+				console.log('✅ [iOS] Using API URL from app.json:', configApiUrl);
+				console.log('   (Physical device or custom configuration)');
+				return configApiUrl;
+			}
+			// iOS Simulator can use localhost directly
 			const apiUrl = 'http://localhost:8000/graphql';
-			console.log('✅ Using iOS simulator API URL:', apiUrl);
+			console.log('✅ [iOS] Using simulator API URL:', apiUrl);
+			console.log('   (For physical devices, set apiUrl in app.json)');
+			return apiUrl;
+		} else if (Platform.OS === 'web') {
+			// Web platform - prefer config URL, fallback to localhost
+			if (configApiUrl) {
+				console.log('✅ [Web] Using API URL from app.json:', configApiUrl);
+				return configApiUrl;
+			}
+			const apiUrl = 'http://localhost:8000/graphql';
+			console.log('✅ [Web] Using localhost API URL:', apiUrl);
 			return apiUrl;
 		} else {
-			// For physical devices, user should set this in app.json
-			// Default fallback - UPDATE THIS WITH YOUR COMPUTER'S IP ADDRESS
-			const apiUrl = 'http://192.168.1.71:8000/graphql'; // ⚠️ UPDATE THIS!
-			console.warn(
-				'⚠️ Physical device detected. Please update the API URL in app.json (extra.apiUrl) with your computer IP'
-			);
-			console.warn('Current API URL:', apiUrl);
-			return apiUrl;
+			// Unknown platform - use config URL or fallback
+			if (configApiUrl) {
+				console.log(
+					'✅ [Unknown Platform] Using API URL from app.json:',
+					configApiUrl
+				);
+				return configApiUrl;
+			}
+
+			// Fallback - this should ideally be set in app.json
+			const fallbackUrl = 'http://192.168.254.237:8000/graphql';
+			console.warn('⚠️ [Unknown Platform] No API URL configured in app.json');
+			console.warn("   Please add your computer's IP address to app.json:");
+			console.warn('   "extra": { "apiUrl": "http://YOUR_IP:8000/graphql" }');
+			console.warn('   Using fallback URL:', fallbackUrl);
+			return fallbackUrl;
 		}
 	}
+
+	// Production URL
 	return 'https://your-production-api.com/graphql';
 };
 

@@ -6,7 +6,9 @@ import { GET_SESSION_LOGS_QUERY } from '@/graphql/queries';
 import { formatTimeTo12Hour } from '@/utils/time-utils';
 import { useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import Constants from 'expo-constants';
+import { Image as ExpoImage } from 'expo-image';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
 	Dimensions,
 	Image,
@@ -20,12 +22,60 @@ import {
 
 const { width } = Dimensions.get('window');
 
+interface WorkoutExercise {
+	id: string;
+	name: string;
+	bodyPart: string;
+	target: string;
+	equipment?: string;
+	gifUrl?: string;
+	sets: number;
+	reps: number;
+}
+
 const MemberSessionLogs = () => {
 	const { user } = useAuth();
 	const [refreshing, setRefreshing] = useState(false);
 	const [selectedLog, setSelectedLog] = useState<any>(null);
 	const [showImagesModal, setShowImagesModal] = useState(false);
 	const [showDetailsModal, setShowDetailsModal] = useState(false);
+
+	const apiKey =
+		(Constants?.expoConfig as any)?.extra?.exerciseDbApiKey ??
+		(Constants?.manifest as any)?.extra?.exerciseDbApiKey;
+
+	const buildExerciseImageUrl = useCallback(
+		(exerciseId: string) => {
+			if (!apiKey) return null;
+			return `https://exercisedb.p.rapidapi.com/image?exerciseId=${encodeURIComponent(
+				exerciseId
+			)}&resolution=360&rapidapi-key=${apiKey}`;
+		},
+		[apiKey]
+	);
+
+	// Parse workoutType JSON string to get exercises
+	const parseWorkoutExercises = useCallback((workoutType: string | null | undefined): WorkoutExercise[] => {
+		if (!workoutType) return [];
+		try {
+			const parsed = JSON.parse(workoutType);
+			if (Array.isArray(parsed)) {
+				return parsed.map((w: any) => ({
+					id: String(w.id || ''),
+					name: String(w.name || ''),
+					bodyPart: String(w.bodyPart || ''),
+					target: String(w.target || ''),
+					equipment: w.equipment ? String(w.equipment) : undefined,
+					gifUrl: w.gifUrl ? String(w.gifUrl) : undefined,
+					sets: typeof w.sets === 'number' ? w.sets : parseInt(String(w.sets || '0'), 10) || 0,
+					reps: typeof w.reps === 'number' ? w.reps : parseInt(String(w.reps || '0'), 10) || 0,
+				}));
+			}
+			return [];
+		} catch {
+			return [];
+		}
+	}, []);
 
 	const { data, refetch, loading } = useQuery<GetSessionLogsQuery>(
 		GET_SESSION_LOGS_QUERY,
@@ -230,6 +280,20 @@ const MemberSessionLogs = () => {
 														</Text>
 													</View>
 												)}
+												{(() => {
+													const exercises = parseWorkoutExercises(item.session?.workoutType);
+													if (exercises.length > 0) {
+														return (
+															<View className='flex-row items-center mt-2'>
+																<Ionicons name='barbell' size={14} color='#F9C513' />
+																<Text className='text-[#F9C513] text-xs ml-1'>
+																	{exercises.length} Exercise{exercises.length !== 1 ? 's' : ''}
+																</Text>
+															</View>
+														);
+													}
+													return null;
+												})()}
 												{item.progressImages && (
 													<View className='flex-row items-center mt-2'>
 														<Ionicons name='images' size={14} color='#F9C513' />
@@ -349,16 +413,6 @@ const MemberSessionLogs = () => {
 													</Text>
 												</View>
 											)}
-											{selectedLog.session?.workoutType && (
-												<View className='mb-3'>
-													<Text className='text-text-secondary text-xs mb-1'>
-														Workout Type
-													</Text>
-													<Text className='text-text-primary font-semibold'>
-														{selectedLog.session.workoutType}
-													</Text>
-												</View>
-											)}
 											{selectedLog.session?.note && (
 												<View className='mb-3'>
 													<Text className='text-text-secondary text-xs mb-1'>
@@ -419,6 +473,101 @@ const MemberSessionLogs = () => {
 											)}
 										</View>
 									</View>
+
+									{/* Workout Exercises */}
+									{(() => {
+										const exercises = parseWorkoutExercises(selectedLog.session?.workoutType);
+										if (exercises.length === 0) return null;
+										
+										return (
+											<View className='mb-6'>
+												<Text className='text-lg font-semibold text-text-primary mb-3'>
+													Workout Exercises
+												</Text>
+												<View className='space-y-3'>
+													{exercises.map((exercise, index) => {
+														const imageUrl = buildExerciseImageUrl(exercise.id);
+														return (
+															<View
+																key={`${exercise.id}-${index}`}
+																className='bg-bg-darker rounded-xl p-4 border border-[#F9C513]'
+																style={{ borderWidth: 0.5 }}
+															>
+																<View className='flex-row'>
+																	{imageUrl && (
+																		<View className='mr-3'>
+																			<ExpoImage
+																				source={{ uri: imageUrl }}
+																				style={{
+																					width: 80,
+																					height: 80,
+																					borderRadius: 8,
+																					borderWidth: 0.5,
+																					borderColor: '#F9C513',
+																				}}
+																				contentFit='cover'
+																			/>
+																		</View>
+																	)}
+																	<View className='flex-1'>
+																		<Text className='text-text-primary font-semibold text-base mb-1'>
+																			{exercise.name}
+																		</Text>
+																		<View className='flex-row items-center mb-1'>
+																			<Ionicons
+																				name='body'
+																				size={14}
+																				color='#8E8E93'
+																			/>
+																			<Text className='text-text-secondary text-xs ml-1'>
+																				{exercise.bodyPart}
+																			</Text>
+																		</View>
+																		{exercise.target && (
+																			<View className='flex-row items-center mb-1'>
+																				<Ionicons
+																					name='target'
+																					size={14}
+																					color='#8E8E93'
+																				/>
+																				<Text className='text-text-secondary text-xs ml-1'>
+																					{exercise.target}
+																				</Text>
+																			</View>
+																		)}
+																		{exercise.equipment && (
+																			<View className='flex-row items-center mb-2'>
+																				<Ionicons
+																					name='construct'
+																					size={14}
+																					color='#8E8E93'
+																				/>
+																				<Text className='text-text-secondary text-xs ml-1'>
+																					{exercise.equipment}
+																				</Text>
+																			</View>
+																		)}
+																		<View className='flex-row items-center'>
+																			<View className='bg-[#F9C513] px-2 py-1 rounded mr-2'>
+																				<Text className='text-bg-darker font-semibold text-xs'>
+																					{exercise.sets} Sets
+																				</Text>
+																			</View>
+																			<View className='bg-[#F9C513] px-2 py-1 rounded'>
+																				<Text className='text-bg-darker font-semibold text-xs'>
+																					{exercise.reps} Reps
+																				</Text>
+																			</View>
+																		</View>
+																	</View>
+																</View>
+															</View>
+														);
+													})}
+												</View>
+											</View>
+										);
+									})()}
 
 									{/* Progress Images */}
 									{selectedLog.progressImages && (

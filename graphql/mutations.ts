@@ -451,10 +451,10 @@ export const CREATE_SUBSCRIPTION_REQUEST_MUTATION = gql`
 				description
 				features
 				durationType
+				monthDuration
 			}
 			status
 			requestedAt
-			expiresAt
 			createdAt
 		}
 	}

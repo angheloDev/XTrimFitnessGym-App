@@ -19,11 +19,15 @@ import {
 	GET_GOALS_QUERY,
 	GET_WEIGHT_PROGRESS_CHART_QUERY,
 	GET_PROGRESS_RATINGS_QUERY,
+	GET_CLIENT_SESSIONS_QUERY,
+	GET_SESSION_LOGS_QUERY,
 } from '@/graphql/queries';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
+import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
 	Alert,
 	Dimensions,
@@ -37,6 +41,17 @@ import {
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
+
+interface WorkoutExercise {
+	id: string;
+	name: string;
+	bodyPart: string;
+	target: string;
+	equipment?: string;
+	gifUrl?: string;
+	sets: number;
+	reps: number;
+}
 
 const goalTypeOptions = [
 	{ label: 'Weight Loss', value: 'WEIGHT_LOSS' },
@@ -64,6 +79,45 @@ const MemberProgress = () => {
 	const [currentWeight, setCurrentWeight] = useState('');
 	const [targetDate, setTargetDate] = useState<Date | undefined>();
 	const [errors, setErrors] = useState<Record<string, string>>({});
+	const [selectedSession, setSelectedSession] = useState<any>(null);
+	const [showWorkoutModal, setShowWorkoutModal] = useState(false);
+
+	const apiKey =
+		(Constants?.expoConfig as any)?.extra?.exerciseDbApiKey ??
+		(Constants?.manifest as any)?.extra?.exerciseDbApiKey;
+
+	const buildExerciseImageUrl = useCallback(
+		(exerciseId: string) => {
+			if (!apiKey) return null;
+			return `https://exercisedb.p.rapidapi.com/image?exerciseId=${encodeURIComponent(
+				exerciseId
+			)}&resolution=360&rapidapi-key=${apiKey}`;
+		},
+		[apiKey]
+	);
+
+	// Parse workoutType JSON string to get exercises
+	const parseWorkoutExercises = useCallback((workoutType: string | null | undefined): WorkoutExercise[] => {
+		if (!workoutType) return [];
+		try {
+			const parsed = JSON.parse(workoutType);
+			if (Array.isArray(parsed)) {
+				return parsed.map((w: any) => ({
+					id: String(w.id || ''),
+					name: String(w.name || ''),
+					bodyPart: String(w.bodyPart || ''),
+					target: String(w.target || ''),
+					equipment: w.equipment ? String(w.equipment) : undefined,
+					gifUrl: w.gifUrl ? String(w.gifUrl) : undefined,
+					sets: typeof w.sets === 'number' ? w.sets : parseInt(String(w.sets || '0'), 10) || 0,
+					reps: typeof w.reps === 'number' ? w.reps : parseInt(String(w.reps || '0'), 10) || 0,
+				}));
+			}
+			return [];
+		} catch {
+			return [];
+		}
+	}, []);
 
 	const { data: goalsData, refetch: refetchGoals } = useQuery<
 		GetGoalsQuery,
@@ -86,7 +140,11 @@ const MemberProgress = () => {
 		setRefreshing(true);
 		try {
 			if (user?.id) {
-				await refetchGoals();
+				await Promise.all([
+					refetchGoals(),
+					refetchSessions(),
+					refetchSessionLogs(),
+				]);
 			}
 		} finally {
 			setRefreshing(false);
@@ -113,6 +171,41 @@ const MemberProgress = () => {
 			fetchPolicy: 'cache-and-network',
 		}
 	);
+
+	// Query upcoming sessions to show workouts
+	const { data: sessionsData, refetch: refetchSessions } = useQuery(
+		GET_CLIENT_SESSIONS_QUERY,
+		{
+			variables: { clientId: user?.id || '', status: 'UPCOMING' },
+			fetchPolicy: 'cache-and-network',
+			skip: !user?.id,
+		}
+	);
+
+	// Query recent session logs to show completed workouts
+	const { data: sessionLogsData, refetch: refetchSessionLogs } = useQuery(
+		GET_SESSION_LOGS_QUERY,
+		{
+			variables: { clientId: user?.id || '' },
+			fetchPolicy: 'cache-and-network',
+			skip: !user?.id,
+		}
+	);
+
+	// Get sessions with workouts
+	const sessionsWithWorkouts = useMemo(() => {
+		const upcoming = (sessionsData?.getClientSessions || []).filter((s: any) => {
+			const exercises = parseWorkoutExercises(s.workoutType);
+			return exercises.length > 0;
+		});
+		const completed = (sessionLogsData?.getSessionLogs || [])
+			.filter((log: any) => {
+				const exercises = parseWorkoutExercises(log.session?.workoutType);
+				return exercises.length > 0;
+			})
+			.slice(0, 5); // Show only recent 5
+		return { upcoming, completed };
+	}, [sessionsData, sessionLogsData, parseWorkoutExercises]);
 
 	const [createGoal, { loading: creating }] = useMutation(
 		CREATE_GOAL_MUTATION,
@@ -331,11 +424,12 @@ const MemberProgress = () => {
 						</Text>
 					</View>
 				) : (
-					<FlatList
-						data={goals}
-						keyExtractor={(item) => item.id}
-						scrollEnabled={false}
-						renderItem={({ item }) => (
+					<>
+						<FlatList
+							data={goals}
+							keyExtractor={(item) => item.id}
+							scrollEnabled={false}
+							renderItem={({ item }) => (
 							<View
 								className='bg-bg-primary rounded-xl p-4 mb-3 border border-[#F9C513]'
 								style={{ borderWidth: 0.5 }}
@@ -422,6 +516,109 @@ const MemberProgress = () => {
 							</View>
 						)}
 					/>
+
+					{/* Workouts Section */}
+					{(sessionsWithWorkouts.upcoming.length > 0 || sessionsWithWorkouts.completed.length > 0) && (
+						<View className='mt-6'>
+							<Text className='text-2xl font-bold text-text-primary mb-4'>
+								Workouts
+							</Text>
+							<Text className='text-text-secondary mb-4'>
+								Exercises from your sessions
+							</Text>
+
+							{/* Upcoming Sessions with Workouts */}
+							{sessionsWithWorkouts.upcoming.length > 0 && (
+								<View className='mb-4'>
+									<Text className='text-lg font-semibold text-text-primary mb-3'>
+										Upcoming Sessions
+									</Text>
+									{sessionsWithWorkouts.upcoming.map((session: any) => {
+										const exercises = parseWorkoutExercises(session.workoutType);
+										if (exercises.length === 0) return null;
+										return (
+											<TouchableOpacity
+												key={session.id}
+												onPress={() => {
+													setSelectedSession(session);
+													setShowWorkoutModal(true);
+												}}
+												className='bg-bg-primary rounded-xl p-4 mb-3 border border-[#F9C513]'
+												style={{ borderWidth: 0.5 }}
+											>
+												<Text className='text-text-primary font-semibold text-base mb-2'>
+													{session.name}
+												</Text>
+												<View className='flex-row items-center mb-2'>
+													<Ionicons name='calendar' size={14} color='#8E8E93' />
+													<Text className='text-text-secondary text-sm ml-1'>
+														{new Date(session.date).toLocaleDateString('en-US', {
+															month: 'short',
+															day: 'numeric',
+															year: 'numeric',
+														})}
+													</Text>
+												</View>
+												<View className='flex-row items-center'>
+													<Ionicons name='barbell' size={14} color='#F9C513' />
+													<Text className='text-[#F9C513] text-sm ml-1 font-semibold'>
+														{exercises.length} Exercise{exercises.length !== 1 ? 's' : ''}
+													</Text>
+												</View>
+											</TouchableOpacity>
+										);
+									})}
+								</View>
+							)}
+
+							{/* Recent Completed Sessions with Workouts */}
+							{sessionsWithWorkouts.completed.length > 0 && (
+								<View>
+									<Text className='text-lg font-semibold text-text-primary mb-3'>
+										Recent Sessions
+									</Text>
+									{sessionsWithWorkouts.completed.map((log: any) => {
+										const exercises = parseWorkoutExercises(log.session?.workoutType);
+										if (exercises.length === 0) return null;
+										return (
+											<TouchableOpacity
+												key={log.id}
+												onPress={() => {
+													setSelectedSession(log.session);
+													setShowWorkoutModal(true);
+												}}
+												className='bg-bg-primary rounded-xl p-4 mb-3 border border-[#F9C513]'
+												style={{ borderWidth: 0.5 }}
+											>
+												<Text className='text-text-primary font-semibold text-base mb-2'>
+													{log.session?.name || 'Session'}
+												</Text>
+												<View className='flex-row items-center mb-2'>
+													<Ionicons name='checkmark-circle' size={14} color='#4CAF50' />
+													<Text className='text-text-secondary text-sm ml-1'>
+														Completed{' '}
+														{log.completedAt
+															? new Date(log.completedAt).toLocaleDateString('en-US', {
+																	month: 'short',
+																	day: 'numeric',
+																})
+															: ''}
+													</Text>
+												</View>
+												<View className='flex-row items-center'>
+													<Ionicons name='barbell' size={14} color='#F9C513' />
+													<Text className='text-[#F9C513] text-sm ml-1 font-semibold'>
+														{exercises.length} Exercise{exercises.length !== 1 ? 's' : ''}
+													</Text>
+												</View>
+											</TouchableOpacity>
+										);
+									})}
+								</View>
+							)}
+						</View>
+					)}
+					</>
 				)}
 			</ScrollView>
 
@@ -685,6 +882,147 @@ const MemberProgress = () => {
 									)}
 								</View>
 							)}
+						</ScrollView>
+					</View>
+				</View>
+			</Modal>
+
+			{/* Workout Exercises Modal */}
+			<Modal
+				visible={showWorkoutModal}
+				animationType='slide'
+				transparent={false}
+				onRequestClose={() => {
+					setShowWorkoutModal(false);
+					setSelectedSession(null);
+				}}
+			>
+				<View className='flex-1 bg-bg-darker justify-center px-5'>
+					<View
+						className='bg-bg-primary rounded-2xl p-6 max-h-[80%] border border-[#F9C513]'
+						style={{ borderWidth: 0.5 }}
+					>
+						<View className='flex-row justify-between items-center mb-4'>
+							<View className='flex-1'>
+								<Text className='text-2xl font-bold text-text-primary'>
+									{selectedSession?.name || 'Workout Exercises'}
+								</Text>
+								{selectedSession?.date && (
+									<Text className='text-text-secondary text-sm mt-1'>
+										{new Date(selectedSession.date).toLocaleDateString('en-US', {
+											month: 'long',
+											day: 'numeric',
+											year: 'numeric',
+										})}
+									</Text>
+								)}
+							</View>
+							<TouchableOpacity
+								onPress={() => {
+									setShowWorkoutModal(false);
+									setSelectedSession(null);
+								}}
+							>
+								<Ionicons name='close' size={28} color='#8E8E93' />
+							</TouchableOpacity>
+						</View>
+						<ScrollView showsVerticalScrollIndicator={false}>
+							{(() => {
+								const exercises = parseWorkoutExercises(selectedSession?.workoutType);
+								if (exercises.length === 0) {
+									return (
+										<View className='items-center justify-center py-10'>
+											<Text className='text-text-secondary'>
+												No exercises found for this session
+											</Text>
+										</View>
+									);
+								}
+								
+								return (
+									<View className='space-y-3'>
+										{exercises.map((exercise, index) => {
+											const imageUrl = buildExerciseImageUrl(exercise.id);
+											return (
+												<View
+													key={`${exercise.id}-${index}`}
+													className='bg-bg-darker rounded-xl p-4 border border-[#F9C513]'
+													style={{ borderWidth: 0.5 }}
+												>
+													<View className='flex-row'>
+														{imageUrl && (
+															<View className='mr-3'>
+																<ExpoImage
+																	source={{ uri: imageUrl }}
+																	style={{
+																		width: 80,
+																		height: 80,
+																		borderRadius: 8,
+																		borderWidth: 0.5,
+																		borderColor: '#F9C513',
+																	}}
+																	contentFit='cover'
+																/>
+															</View>
+														)}
+														<View className='flex-1'>
+															<Text className='text-text-primary font-semibold text-base mb-1'>
+																{exercise.name}
+															</Text>
+															<View className='flex-row items-center mb-1'>
+																<Ionicons
+																	name='body'
+																	size={14}
+																	color='#8E8E93'
+																/>
+																<Text className='text-text-secondary text-xs ml-1'>
+																	{exercise.bodyPart}
+																</Text>
+															</View>
+															{exercise.target && (
+																<View className='flex-row items-center mb-1'>
+																	<Ionicons
+																		name='target'
+																		size={14}
+																		color='#8E8E93'
+																	/>
+																	<Text className='text-text-secondary text-xs ml-1'>
+																		{exercise.target}
+																	</Text>
+																</View>
+															)}
+															{exercise.equipment && (
+																<View className='flex-row items-center mb-2'>
+																	<Ionicons
+																		name='construct'
+																		size={14}
+																		color='#8E8E93'
+																	/>
+																	<Text className='text-text-secondary text-xs ml-1'>
+																		{exercise.equipment}
+																	</Text>
+																</View>
+															)}
+															<View className='flex-row items-center'>
+																<View className='bg-[#F9C513] px-2 py-1 rounded mr-2'>
+																	<Text className='text-bg-darker font-semibold text-xs'>
+																		{exercise.sets} Sets
+																	</Text>
+																</View>
+																<View className='bg-[#F9C513] px-2 py-1 rounded'>
+																	<Text className='text-bg-darker font-semibold text-xs'>
+																		{exercise.reps} Reps
+																	</Text>
+																</View>
+															</View>
+														</View>
+													</View>
+												</View>
+											);
+										})}
+									</View>
+								);
+							})()}
 						</ScrollView>
 					</View>
 				</View>
