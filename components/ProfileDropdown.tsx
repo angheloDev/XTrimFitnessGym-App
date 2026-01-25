@@ -66,6 +66,15 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
 		}
 	};
 
+	const handleAttendancePress = () => {
+		onClose();
+		if (user?.role === 'coach') {
+			router.push('/(coach)/attendance');
+		} else {
+			router.push('/(member)/attendance');
+		}
+	};
+
 	const handleLogout = () => {
 		onClose();
 		Alert.alert(
@@ -131,6 +140,17 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
 							<Ionicons name='person-outline' size={24} color='#F9C513' />
 							<Text className='text-text-primary font-medium ml-3 text-base'>
 								Profile
+							</Text>
+						</TouchableOpacity>
+
+						{/* Attendance Option */}
+						<TouchableOpacity
+							onPress={handleAttendancePress}
+							className='flex-row items-center px-4 py-4 border-b border-bg-darker'
+						>
+							<Ionicons name='calendar-outline' size={24} color='#F9C513' />
+							<Text className='text-text-primary font-medium ml-3 text-base'>
+								Attendance
 							</Text>
 						</TouchableOpacity>
 

@@ -117,6 +117,12 @@ const MemberLayout = () => {
 						href: null,
 					}}
 				/>
+				<Tabs.Screen
+					name='attendance'
+					options={{
+						href: null,
+					}}
+				/>
 			</Tabs>
 		</ProtectedRoute>
 	);

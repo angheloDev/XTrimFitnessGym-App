@@ -17,6 +17,7 @@ export const LOGIN_MUTATION = gql`
 				agreedToTermsAndConditions
 				agreedToPrivacyPolicy
 				agreedToLiabilityWaiver
+				attendanceId
 				membershipDetails {
 					membershipId
 					physiqueGoalType
@@ -60,6 +61,7 @@ export const CREATE_USER_MUTATION = gql`
 				agreedToTermsAndConditions
 				agreedToPrivacyPolicy
 				agreedToLiabilityWaiver
+				attendanceId
 				membershipDetails {
 					membershipId
 					physiqueGoalType

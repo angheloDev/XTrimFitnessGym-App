@@ -211,6 +211,7 @@ export const GET_USER_QUERY = gql`
 			email
 			role
 			phoneNumber
+			attendanceId
 			membershipDetails {
 				membershipId
 				physiqueGoalType
