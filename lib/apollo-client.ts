@@ -17,6 +17,10 @@ const getApiUrl = () => {
 		// This is useful for physical devices that need the actual IP address
 		const configApiUrl = Constants.expoConfig?.extra?.apiUrl;
 
+		// ✅ Single source of truth: if apiUrl is set in app.json, always use it
+		// for BOTH emulator and physical devices. This avoids port/host drift.
+		if (configApiUrl) return configApiUrl;
+
 		// For emulators/simulators we want localhost-style URLs that
 		// always work out of the box, and reserve configApiUrl for
 		// **physical devices** only.
@@ -25,28 +29,27 @@ const getApiUrl = () => {
 		// Platform-specific URL logic
 		if (Platform.OS === 'android') {
 			if (!isPhysicalDevice) {
-				// Android Emulator uses 10.0.2.2 to access host machine's localhost
-				// This is a special IP that Android emulator uses to reach the host
-				const apiUrl = 'http://10.0.2.2:8000/graphql';
-				console.log('✅ [Android] Using emulator API URL:', apiUrl);
-				console.log('   (Physical devices should use apiUrl in app.json)');
-				return apiUrl;
+				// Android Emulator uses 10.0.2.2 to access host machine's localhost,
+				// BUT if we have a LAN IP configured, prefer it (more reliable).
+				const lanFallback = 'http://192.168.254.154:8000/graphql';
+				console.log('✅ [Android] Using emulator API URL (LAN):', lanFallback);
+				return lanFallback;
 			}
 
 			// Physical Android devices - must use the machine's LAN IP from app.json
 			if (configApiUrl) {
 				console.log(
 					'✅ [Android] Using API URL from app.json for physical device:',
-					configApiUrl
+					configApiUrl,
 				);
 				return configApiUrl;
 			}
 
 			console.warn(
-				'⚠️ [Android] Physical device detected but no extra.apiUrl configured.'
+				'⚠️ [Android] Physical device detected but no extra.apiUrl configured.',
 			);
 			console.warn(
-				'   Please set "extra.apiUrl" in app.json to "http://YOUR_IP:8000/graphql".'
+				'   Please set "extra.apiUrl" in app.json to "http://YOUR_IP:8000/graphql".',
 			);
 
 			// Sensible fallback for misconfigured physical device
@@ -66,16 +69,16 @@ const getApiUrl = () => {
 			if (configApiUrl) {
 				console.log(
 					'✅ [iOS] Using API URL from app.json for physical device:',
-					configApiUrl
+					configApiUrl,
 				);
 				return configApiUrl;
 			}
 
 			console.warn(
-				'⚠️ [iOS] Physical device detected but no extra.apiUrl configured.'
+				'⚠️ [iOS] Physical device detected but no extra.apiUrl configured.',
 			);
 			console.warn(
-				'   Please set "extra.apiUrl" in app.json to "http://YOUR_IP:8000/graphql".'
+				'   Please set "extra.apiUrl" in app.json to "http://YOUR_IP:8000/graphql".',
 			);
 
 			// Sensible fallback for misconfigured physical device
@@ -96,7 +99,7 @@ const getApiUrl = () => {
 			if (configApiUrl) {
 				console.log(
 					'✅ [Unknown Platform] Using API URL from app.json:',
-					configApiUrl
+					configApiUrl,
 				);
 				return configApiUrl;
 			}
@@ -116,6 +119,7 @@ const getApiUrl = () => {
 };
 
 const API_URL = getApiUrl();
+console.log('✅ [Apollo Client] GraphQL endpoint:', API_URL);
 
 const httpLink = createHttpLink({
 	uri: API_URL,
@@ -130,7 +134,7 @@ const authLink = setContext(async (_, { headers }) => {
 
 		if (token) {
 			console.log(
-				'✅ [Apollo Client] Token found in AsyncStorage, adding to Authorization header'
+				'✅ [Apollo Client] Token found in AsyncStorage, adding to Authorization header',
 			);
 			return {
 				headers: {
@@ -144,7 +148,7 @@ const authLink = setContext(async (_, { headers }) => {
 	} catch (error) {
 		console.error(
 			'❌ [Apollo Client] Error retrieving token from AsyncStorage:',
-			error
+			error,
 		);
 	}
 
@@ -160,14 +164,14 @@ const errorLink = onError((error: any) => {
 	if (error.graphQLErrors) {
 		error.graphQLErrors.forEach((graphQLError: any) => {
 			console.error(
-				`[GraphQL error]: Message: ${graphQLError.message}, Location: ${graphQLError.locations}, Path: ${graphQLError.path}`
+				`[GraphQL error]: Message: ${graphQLError.message}, Location: ${graphQLError.locations}, Path: ${graphQLError.path}`,
 			);
 		});
 	}
 
 	if (error.networkError) {
 		console.error(
-			`[Network error]: ${error.networkError.message || error.networkError}`
+			`[Network error]: ${error.networkError.message || error.networkError}`,
 		);
 	}
 });

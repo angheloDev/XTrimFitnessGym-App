@@ -36,33 +36,35 @@ const getApiUrl = () => {
 	if (__DEV__) {
 		// Get API URL from app.json (if configured)
 		const configApiUrl = Constants.expoConfig?.extra?.apiUrl;
+		const isPhysicalDevice = Constants.isDevice;
+
+		// Prefer config URL when available; patch localhost for Android emulator.
+		// Then strip /graphql because uploads use REST routes.
+		if (configApiUrl) {
+			if (Platform.OS === 'android' && !isPhysicalDevice) {
+				try {
+					const url = new URL(configApiUrl);
+					url.hostname = '10.0.2.2';
+					return url.toString().replace('/graphql', '');
+				} catch {
+					return configApiUrl.replace('/graphql', '');
+				}
+			}
+			return configApiUrl.replace('/graphql', '');
+		}
 		
 		// Platform-specific URL logic
 		if (Platform.OS === 'android') {
-			// If apiUrl is configured in app.json, use it (for physical devices)
-			if (configApiUrl) {
-				return configApiUrl.replace('/graphql', '');
-			}
 			// Android Emulator uses 10.0.2.2 to access host machine's localhost
 			return 'http://10.0.2.2:8000';
 		} else if (Platform.OS === 'ios') {
-			// If apiUrl is configured in app.json, use it (for physical devices)
-			if (configApiUrl) {
-				return configApiUrl.replace('/graphql', '');
-			}
 			// iOS Simulator can use localhost directly
 			return 'http://localhost:8000';
 		} else if (Platform.OS === 'web') {
 			// Web platform - prefer config URL, fallback to localhost
-			if (configApiUrl) {
-				return configApiUrl.replace('/graphql', '');
-			}
 			return 'http://localhost:8000';
 		} else {
 			// Unknown platform - use config URL or fallback
-			if (configApiUrl) {
-				return configApiUrl.replace('/graphql', '');
-			}
 			// Fallback - this should ideally be set in app.json
 			return 'http://192.168.254.237:8000';
 		}

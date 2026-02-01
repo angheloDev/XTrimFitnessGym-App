@@ -100,6 +100,11 @@ const Login = () => {
 		}
 
 		try {
+			// Quick connectivity hint: show the endpoint being used (from Apollo client logs)
+			console.log('🧪 [Login] Attempting login… if this fails with Network request failed, check:');
+			console.log('   - API server is running');
+			console.log('   - Android emulator uses 10.0.2.2 for host localhost');
+			console.log('   - Physical device must use LAN IP in app.json (and Windows Firewall allows it)');
 			await login({
 				variables: {
 					input: {
