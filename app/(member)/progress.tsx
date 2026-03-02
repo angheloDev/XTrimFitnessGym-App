@@ -4,6 +4,7 @@ import GradientButton from '@/components/GradientButton';
 import Input from '@/components/Input';
 import Select from '@/components/Select';
 import TabHeader from '@/components/TabHeader';
+import { TourStep } from '@/components/TourStep';
 import { useAuth } from '@/contexts/AuthContext';
 import {
 	GetGoalsQuery,
@@ -376,39 +377,45 @@ const MemberProgress = () => {
 					/>
 				}
 			>
-				<View className='mb-6'>
-					<View>
-						<Text className='text-3xl font-bold text-text-primary'>
-							Progress
-						</Text>
-						<Text className='text-text-secondary mt-1'>
-							Track your fitness goals
-						</Text>
+				<TourStep stepId='progress'>
+					<View className='mb-6'>
+						<View>
+							<Text className='text-3xl font-bold text-text-primary'>
+								Progress
+							</Text>
+							<Text className='text-text-secondary mt-1'>
+								Track your fitness goals
+							</Text>
+						</View>
+						<View className='flex-row gap-3 mt-4'>
+						<TourStep stepId='progress_add_goal'>
+							<GradientButton
+								onPress={() => {
+									resetForm();
+									setShowCreateModal(true);
+								}}
+								className='flex-1'
+							>
+								Add Goal
+							</GradientButton>
+						</TourStep>
+						<TourStep stepId='progress_session_logs'>
+							<GradientButton
+								onPress={() => router.push('/(member)/session-logs')}
+								className='flex-1'
+								variant='secondary'
+							>
+								<View className='flex-row items-center justify-center'>
+									<Ionicons name='document-text' size={20} color='#F9C513' />
+									<Text className='text-[#F9C513] font-semibold ml-2'>
+										Session Logs
+									</Text>
+								</View>
+							</GradientButton>
+						</TourStep>
 					</View>
-					<View className='flex-row gap-3 mt-4'>
-						<GradientButton
-						onPress={() => {
-							resetForm();
-							setShowCreateModal(true);
-						}}
-							className='flex-1'
-						>
-							Add Goal
-						</GradientButton>
-						<GradientButton
-							onPress={() => router.push('/(member)/session-logs')}
-							className='flex-1'
-							variant='secondary'
-					>
-							<View className='flex-row items-center justify-center'>
-								<Ionicons name='document-text' size={20} color='#F9C513' />
-								<Text className='text-[#F9C513] font-semibold ml-2'>
-									Session Logs
-								</Text>
-							</View>
-						</GradientButton>
 					</View>
-				</View>
+				</TourStep>
 
 				{goals.length === 0 ? (
 					<View

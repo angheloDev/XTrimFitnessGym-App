@@ -1,6 +1,7 @@
 import FixedView from '@/components/FixedView';
 import Input from '@/components/Input';
 import TabHeader from '@/components/TabHeader';
+import { TourStep } from '@/components/TourStep';
 import { useAuth } from '@/contexts/AuthContext';
 import {
 	GetUsersQuery,
@@ -213,26 +214,30 @@ const CoachClients = () => {
 					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor='#F9C513' />
 				}
 			>
-				<View className='flex-row items-center justify-between mb-6'>
-					<View>
-						<Text className='text-3xl font-bold text-text-primary'>
-							My Clients
-						</Text>
-						<Text className='text-text-secondary mt-1'>
-							Manage your client relationships
-						</Text>
+				<TourStep stepId='clients'>
+					<View className='flex-row items-center justify-between mb-6'>
+						<View>
+							<Text className='text-3xl font-bold text-text-primary'>
+								My Clients
+							</Text>
+							<Text className='text-text-secondary mt-1'>
+								Manage your client relationships
+							</Text>
+						</View>
 					</View>
-				</View>
+				</TourStep>
 
 				{/* Search Bar */}
-				<View className='mb-6'>
-					<Input
-						placeholder='Search clients by name or email...'
-						value={searchQuery}
-						onChangeText={setSearchQuery}
-						className='bg-bg-primary border border-[#F9C513]/20'
-					/>
-				</View>
+				<TourStep stepId='clients_search'>
+					<View className='mb-6'>
+						<Input
+							placeholder='Search clients by name or email...'
+							value={searchQuery}
+							onChangeText={setSearchQuery}
+							className='bg-bg-primary border border-[#F9C513]/20'
+						/>
+					</View>
+				</TourStep>
 
 				{/* Client Stats */}
 				<View className='flex-row gap-3 mb-6'>

@@ -1,4 +1,5 @@
-{	"expo": {
+{
+	"expo": {
 		"name": "XTrimFitGym",
 		"slug": "XTrimFitGym",
 		"version": "1.0.0",
@@ -60,7 +61,7 @@
 			"reactCompiler": true
 		},
 		"extra": {
-			"apiUrl": "http://192.168.254.154:8000/graphql",
+			"apiUrl": "https://xtrimfitgym-api.onrender.com/graphql",
 			"exerciseDbApiKey": "64b5510c2bmsh289da1855afde6dp104548jsn10ffb1b0c145"
 		}
 	}

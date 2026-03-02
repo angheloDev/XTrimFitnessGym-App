@@ -1,5 +1,6 @@
 import FixedView from '@/components/FixedView';
 import TabHeader from '@/components/TabHeader';
+import { TourStep } from '@/components/TourStep';
 import { GET_CURRENT_MEMBERSHIP_QUERY } from '@/graphql/queries';
 import { useQuery } from '@apollo/client/react';
 import React, { useEffect, useState } from 'react';
@@ -48,17 +49,19 @@ const CoachSubscription = () => {
 					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor='#F9C513' />
 				}
 			>
-				<View className='flex-row justify-between items-center mb-6'>
-					<View>
-						<Text className='text-3xl font-bold text-text-primary'>
-							Subscription
-						</Text>
-						<Text className='text-text-secondary mt-1'>
-							Your membership status
-						</Text>
+				<TourStep stepId='subscription'>
+					<View className='flex-row justify-between items-center mb-6'>
+						<View>
+							<Text className='text-3xl font-bold text-text-primary'>
+								Subscription
+							</Text>
+							<Text className='text-text-secondary mt-1'>
+								Your membership status
+							</Text>
+						</View>
+						<Ionicons name='card' size={32} color='#F9C513' />
 					</View>
-					<Ionicons name='card' size={32} color='#F9C513' />
-				</View>
+				</TourStep>
 
 				{currentMembership ? (
 					<>

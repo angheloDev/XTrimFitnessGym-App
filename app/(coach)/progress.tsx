@@ -3,6 +3,7 @@ import FixedView from '@/components/FixedView';
 import GradientButton from '@/components/GradientButton';
 import Select from '@/components/Select';
 import TabHeader from '@/components/TabHeader';
+import { TourStep } from '@/components/TourStep';
 import { useAuth } from '@/contexts/AuthContext';
 import {
 	GetUsersQuery,
@@ -256,17 +257,19 @@ const CoachProgress = () => {
 					/>
 				}
 			>
-				<View className='flex-row justify-between items-center mb-6'>
-					<View>
-						<Text className='text-3xl font-bold text-text-primary'>
-							Client Progress
-						</Text>
-						<Text className='text-text-secondary mt-1'>
-							Track and rate your clients&apos; progress
-						</Text>
+				<TourStep stepId='progress'>
+					<View className='flex-row justify-between items-center mb-6'>
+						<View>
+							<Text className='text-3xl font-bold text-text-primary'>
+								Client Progress
+							</Text>
+							<Text className='text-text-secondary mt-1'>
+								Track and rate your clients&apos; progress
+							</Text>
+						</View>
+						<Ionicons name='trending-up' size={32} color='#F9C513' />
 					</View>
-					<Ionicons name='trending-up' size={32} color='#F9C513' />
-				</View>
+				</TourStep>
 
 				{clients.length === 0 ? (
 					<View

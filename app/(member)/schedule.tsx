@@ -1,7 +1,8 @@
-﻿import CameraCapture from '@/components/CameraCapture';
+import CameraCapture from '@/components/CameraCapture';
 import FixedView from '@/components/FixedView';
 import GradientButton from '@/components/GradientButton';
 import TabHeader from '@/components/TabHeader';
+import { TourStep } from '@/components/TourStep';
 import { useAuth } from '@/contexts/AuthContext';
 import { GetClientSessionsQuery } from '@/graphql/generated/types';
 import {
@@ -390,14 +391,16 @@ const MemberSchedule = () => {
 					/>
 				}
 			>
-				<View className='mb-6'>
-					<Text className='text-3xl font-bold text-text-primary'>
-						Upcoming Sessions
-					</Text>
-					<Text className='text-text-secondary mt-1'>
-						Your scheduled workouts
-					</Text>
-				</View>
+				<TourStep stepId='schedule'>
+					<View className='mb-6'>
+						<Text className='text-3xl font-bold text-text-primary'>
+							Upcoming Sessions
+						</Text>
+						<Text className='text-text-secondary mt-1'>
+							Your scheduled workouts
+						</Text>
+					</View>
+				</TourStep>
 				{loading ? (
 					<View className='items-center justify-center py-20'>
 						<Text className='text-text-secondary'>Loading...</Text>

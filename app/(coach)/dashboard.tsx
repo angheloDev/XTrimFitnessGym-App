@@ -1,5 +1,6 @@
 import FixedView from '@/components/FixedView';
 import TabHeader from '@/components/TabHeader';
+import { TourStep } from '@/components/TourStep';
 import { useAuth } from '@/contexts/AuthContext';
 import {
 	GET_COACH_SESSIONS_QUERY,
@@ -10,7 +11,7 @@ import { formatTimeTo12Hour } from '@/utils/time-utils';
 import { useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
 	FlatList,
 	RefreshControl,
@@ -26,27 +27,33 @@ const CoachDashboard = () => {
 	const router = useRouter();
 	const [refreshing, setRefreshing] = useState(false);
 	const { width } = useWindowDimensions();
-
-	const { data: sessionsData, loading: sessionsLoading, refetch: refetchSessions } = useQuery(
-		GET_COACH_SESSIONS_QUERY,
-		{
-			variables: { coachId: user?.id || '' },
-			skip: !user?.id,
-			fetchPolicy: 'cache-and-network',
-		}
-	);
-
-	const { data: clientsData, refetch: refetchClients } = useQuery(GET_USERS_QUERY, {
-		variables: { role: 'member' },
+	const {
+		data: sessionsData,
+		loading: sessionsLoading,
+		refetch: refetchSessions,
+	} = useQuery(GET_COACH_SESSIONS_QUERY, {
+		variables: { coachId: user?.id || '' },
+		skip: !user?.id,
 		fetchPolicy: 'cache-and-network',
 	});
 
-	const { data: requestsData, refetch: refetchRequests } = useQuery(GET_PENDING_COACH_REQUESTS_QUERY, {
-		fetchPolicy: 'network-only', // Always fetch from network for real-time updates
-		pollInterval: 2000, // Poll every 2 seconds for real-time updates
-		errorPolicy: 'all', // Allow partial data even if some fields fail
-		notifyOnNetworkStatusChange: true,
-	});
+	const { data: clientsData, refetch: refetchClients } = useQuery(
+		GET_USERS_QUERY,
+		{
+			variables: { role: 'member' },
+			fetchPolicy: 'cache-and-network',
+		},
+	);
+
+	const { data: requestsData, refetch: refetchRequests } = useQuery(
+		GET_PENDING_COACH_REQUESTS_QUERY,
+		{
+			fetchPolicy: 'network-only', // Always fetch from network for real-time updates
+			pollInterval: 2000, // Poll every 2 seconds for real-time updates
+			errorPolicy: 'all', // Allow partial data even if some fields fail
+			notifyOnNetworkStatusChange: true,
+		},
+	);
 
 	// Refetch data when screen is mounted
 	useEffect(() => {
@@ -76,29 +83,29 @@ const CoachDashboard = () => {
 	// Memoize sessions to prevent creating new array on every render
 	const sessions = useMemo(
 		() => (sessionsData as any)?.getCoachSessions || [],
-		[sessionsData]
+		[sessionsData],
 	);
 
 	// Filter to only show coach's own clients
 	const allClients = (clientsData as any)?.getUsers || [];
 	const clients = allClients.filter((client: any) =>
-		user?.coachDetails?.clientsIds?.includes(client.id)
+		user?.coachDetails?.clientsIds?.includes(client.id),
 	);
 	const upcomingSessions = useMemo(() => {
 		const now = new Date();
 		// Set to start of today for accurate date comparison
 		now.setHours(0, 0, 0, 0);
-		
+
 		return sessions.filter((s: any) => {
 			// Exclude templates
 			if (s.isTemplate) return false;
-			
+
 			// Exclude cancelled sessions
 			if (s.status === 'cancelled') return false;
-			
+
 			// Only include scheduled sessions
 			if (s.status !== 'scheduled') return false;
-			
+
 			// Only include future sessions (including today)
 			const sessionDate = new Date(s.date);
 			sessionDate.setHours(0, 0, 0, 0);
@@ -110,7 +117,8 @@ const CoachDashboard = () => {
 		const allRequests = (requestsData as any)?.getPendingCoachRequests || [];
 		// Filter out requests with invalid client data
 		return allRequests.filter(
-			(request: any) => request && request.id && request.client && request.client.id
+			(request: any) =>
+				request && request.id && request.client && request.client.id,
 		);
 	}, [requestsData]);
 
@@ -157,17 +165,21 @@ const CoachDashboard = () => {
 			const date = new Date(today);
 			date.setDate(date.getDate() - i);
 			date.setHours(0, 0, 0, 0);
-			
+
 			const daySessions = sessions.filter((s: any) => {
 				const sessionDate = new Date(s.date);
 				sessionDate.setHours(0, 0, 0, 0);
 				return sessionDate.getTime() === date.getTime();
 			});
-			
+
 			days.push({
-				date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+				date: date.toLocaleDateString('en-US', {
+					month: 'short',
+					day: 'numeric',
+				}),
 				total: daySessions.length,
-				completed: daySessions.filter((s: any) => s.status === 'completed').length,
+				completed: daySessions.filter((s: any) => s.status === 'completed')
+					.length,
 			});
 		}
 		return days;
@@ -179,22 +191,23 @@ const CoachDashboard = () => {
 		const today = new Date();
 		for (let i = 3; i >= 0; i--) {
 			const weekStart = new Date(today);
-			weekStart.setDate(weekStart.getDate() - (i * 7) - 6);
+			weekStart.setDate(weekStart.getDate() - i * 7 - 6);
 			weekStart.setHours(0, 0, 0, 0);
-			
+
 			const weekEnd = new Date(weekStart);
 			weekEnd.setDate(weekEnd.getDate() + 6);
 			weekEnd.setHours(23, 59, 59, 999);
-			
+
 			const weekSessions = sessions.filter((s: any) => {
 				const sessionDate = new Date(s.date);
 				return sessionDate >= weekStart && sessionDate <= weekEnd;
 			});
-			
+
 			weeks.push({
 				label: `Week ${4 - i}`,
 				total: weekSessions.length,
-				completed: weekSessions.filter((s: any) => s.status === 'completed').length,
+				completed: weekSessions.filter((s: any) => s.status === 'completed')
+					.length,
 			});
 		}
 		return weeks;
@@ -205,7 +218,9 @@ const CoachDashboard = () => {
 		if (sessionsLast7Days.length === 0) {
 			return (
 				<View className='items-center justify-center py-8'>
-					<Text className='text-text-secondary text-sm'>No session data available</Text>
+					<Text className='text-text-secondary text-sm'>
+						No session data available
+					</Text>
 				</View>
 			);
 		}
@@ -213,7 +228,7 @@ const CoachDashboard = () => {
 		const maxSessions = Math.max(...sessionsLast7Days.map((d) => d.total), 1);
 		const chartHeight = 150;
 		const chartWidth = width - 80;
-		const barWidth = (chartWidth / sessionsLast7Days.length) - 8;
+		const barWidth = chartWidth / sessionsLast7Days.length - 8;
 
 		return (
 			<View className='mt-4'>
@@ -225,12 +240,22 @@ const CoachDashboard = () => {
 					style={{ height: chartHeight, width: chartWidth }}
 				>
 					{sessionsLast7Days.map((day, index) => {
-						const barHeight = maxSessions > 0 ? (day.total / maxSessions) * (chartHeight - 20) : 0;
-						const completedHeight = maxSessions > 0 ? (day.completed / maxSessions) * (chartHeight - 20) : 0;
-						const x = (index * (chartWidth / sessionsLast7Days.length)) + 4;
+						const barHeight =
+							maxSessions > 0
+								? (day.total / maxSessions) * (chartHeight - 20)
+								: 0;
+						const completedHeight =
+							maxSessions > 0
+								? (day.completed / maxSessions) * (chartHeight - 20)
+								: 0;
+						const x = index * (chartWidth / sessionsLast7Days.length) + 4;
 
 						return (
-							<View key={index} className='absolute' style={{ left: x, bottom: 0 }}>
+							<View
+								key={index}
+								className='absolute'
+								style={{ left: x, bottom: 0 }}
+							>
 								{/* Completed sessions bar (green) */}
 								{completedHeight > 0 && (
 									<View
@@ -258,7 +283,11 @@ const CoachDashboard = () => {
 				</View>
 				<View className='flex-row justify-between mt-2'>
 					{sessionsLast7Days.map((day, index) => (
-						<Text key={index} className='text-text-secondary text-xs' style={{ width: barWidth }}>
+						<Text
+							key={index}
+							className='text-text-secondary text-xs'
+							style={{ width: barWidth }}
+						>
 							{day.date.split(' ')[1]}
 						</Text>
 					))}
@@ -283,14 +312,16 @@ const CoachDashboard = () => {
 		if (sessionsLast4Weeks.length === 0) {
 			return (
 				<View className='items-center justify-center py-8'>
-					<Text className='text-text-secondary text-sm'>No session data available</Text>
+					<Text className='text-text-secondary text-sm'>
+						No session data available
+					</Text>
 				</View>
 			);
 		}
 
 		const chartHeight = 150;
 		const chartWidth = width - 80;
-		const barWidth = (chartWidth / sessionsLast4Weeks.length) - 8;
+		const barWidth = chartWidth / sessionsLast4Weeks.length - 8;
 
 		return (
 			<View className='mt-4'>
@@ -302,12 +333,17 @@ const CoachDashboard = () => {
 					style={{ height: chartHeight, width: chartWidth }}
 				>
 					{sessionsLast4Weeks.map((week, index) => {
-						const completionRate = week.total > 0 ? (week.completed / week.total) * 100 : 0;
+						const completionRate =
+							week.total > 0 ? (week.completed / week.total) * 100 : 0;
 						const barHeight = (completionRate / 100) * (chartHeight - 20);
-						const x = (index * (chartWidth / sessionsLast4Weeks.length)) + 4;
+						const x = index * (chartWidth / sessionsLast4Weeks.length) + 4;
 
 						return (
-							<View key={index} className='absolute' style={{ left: x, bottom: 0 }}>
+							<View
+								key={index}
+								className='absolute'
+								style={{ left: x, bottom: 0 }}
+							>
 								<View
 									className={`rounded-t ${
 										completionRate >= 80
@@ -340,7 +376,11 @@ const CoachDashboard = () => {
 				</View>
 				<View className='flex-row justify-between mt-2'>
 					{sessionsLast4Weeks.map((week, index) => (
-						<Text key={index} className='text-text-secondary text-xs' style={{ width: barWidth }}>
+						<Text
+							key={index}
+							className='text-text-secondary text-xs'
+							style={{ width: barWidth }}
+						>
 							{week.label}
 						</Text>
 					))}
@@ -371,39 +411,51 @@ const CoachDashboard = () => {
 				contentContainerClassName='p-5'
 				showsVerticalScrollIndicator={false}
 				refreshControl={
-					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor='#F9C513' />
+					<RefreshControl
+						refreshing={refreshing}
+						onRefresh={onRefresh}
+						tintColor='#F9C513'
+					/>
 				}
 			>
-				<View className='mb-6'>
-					<Text className='text-3xl font-bold text-text-primary'>
-						Dashboard
-					</Text>
-					<Text className='text-text-secondary mt-1'>
-						Welcome back, Coach {user?.firstName}!
-					</Text>
-				</View>
+				<TourStep stepId='dashboard'>
+					<View className='mb-6'>
+						<Text className='text-3xl font-bold text-text-primary'>
+							Dashboard
+						</Text>
+						<Text className='text-text-secondary mt-1'>
+							Welcome back, Coach {user?.firstName}!
+						</Text>
+					</View>
+				</TourStep>
 
 				{/* Quick Stats */}
-				<View className='flex-row gap-3 mb-6'>
-					<View className='flex-1 bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20'>
-						<View className='flex-row items-center mb-2'>
-							<Ionicons name='calendar' size={18} color='#F9C513' />
-							<Text className='text-text-secondary text-xs ml-2'>Upcoming</Text>
+				<TourStep stepId='quickstats'>
+					<View className='flex-row gap-3 mb-6'>
+						<View className='flex-1 bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20'>
+							<View className='flex-row items-center mb-2'>
+								<Ionicons name='calendar' size={18} color='#F9C513' />
+								<Text className='text-text-secondary text-xs ml-2'>
+									Upcoming
+								</Text>
+							</View>
+							<Text className='text-3xl font-bold text-[#F9C513]'>
+								{upcomingSessions.length}
+							</Text>
 						</View>
-						<Text className='text-3xl font-bold text-[#F9C513]'>
-							{upcomingSessions.length}
-						</Text>
-					</View>
-					<View className='flex-1 bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20'>
-						<View className='flex-row items-center mb-2'>
-							<Ionicons name='people' size={18} color='#F9C513' />
-							<Text className='text-text-secondary text-xs ml-2'>Clients</Text>
+						<View className='flex-1 bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20'>
+							<View className='flex-row items-center mb-2'>
+								<Ionicons name='people' size={18} color='#F9C513' />
+								<Text className='text-text-secondary text-xs ml-2'>
+									Clients
+								</Text>
+							</View>
+							<Text className='text-3xl font-bold text-[#F9C513]'>
+								{clients.length}
+							</Text>
 						</View>
-						<Text className='text-3xl font-bold text-[#F9C513]'>
-							{clients.length}
-						</Text>
 					</View>
-				</View>
+				</TourStep>
 
 				{/* Coach Performance Insights */}
 				<View className='bg-bg-primary rounded-xl p-5 mb-6 border border-[#F9C513]/20'>
@@ -513,9 +565,7 @@ const CoachDashboard = () => {
 					{/* Charts Section */}
 					<View className='mt-6 pt-4 border-t border-bg-darker/50'>
 						{renderSessionsChart()}
-						<View className='mt-6'>
-							{renderCompletionRateChart()}
-						</View>
+						<View className='mt-6'>{renderCompletionRateChart()}</View>
 					</View>
 				</View>
 
@@ -608,7 +658,7 @@ const CoachDashboard = () => {
 												{spec}
 											</Text>
 										</View>
-									)
+									),
 								)}
 							</View>
 						</View>
@@ -653,24 +703,28 @@ const CoachDashboard = () => {
 						Quick Actions
 					</Text>
 					<View className='flex-row gap-3 flex-wrap'>
-						<TouchableOpacity
-							onPress={() => router.push('/(coach)/schedule')}
-							className='flex-1 min-w-[45%] bg-bg-primary rounded-xl p-4 items-center border border-[#F9C513]/20'
-						>
-							<Ionicons name='calendar' size={32} color='#F9C513' />
-							<Text className='text-text-primary font-semibold mt-2'>
-								Schedule
-							</Text>
-						</TouchableOpacity>
-						<TouchableOpacity
-							onPress={() => router.push('/(coach)/progress')}
-							className='flex-1 min-w-[45%] bg-bg-primary rounded-xl p-4 items-center border border-[#F9C513]/20'
-						>
-							<Ionicons name='trending-up' size={32} color='#F9C513' />
-							<Text className='text-text-primary font-semibold mt-2'>
-								Progress
-							</Text>
-						</TouchableOpacity>
+						<TourStep stepId='dashboard_quick_schedule'>
+							<TouchableOpacity
+								onPress={() => router.push('/(coach)/schedule')}
+								className='flex-1 min-w-[45%] bg-bg-primary rounded-xl p-4 items-center border border-[#F9C513]/20'
+							>
+								<Ionicons name='calendar' size={32} color='#F9C513' />
+								<Text className='text-text-primary font-semibold mt-2'>
+									Schedule
+								</Text>
+							</TouchableOpacity>
+						</TourStep>
+						<TourStep stepId='dashboard_quick_progress'>
+							<TouchableOpacity
+								onPress={() => router.push('/(coach)/progress')}
+								className='flex-1 min-w-[45%] bg-bg-primary rounded-xl p-4 items-center border border-[#F9C513]/20'
+							>
+								<Ionicons name='trending-up' size={32} color='#F9C513' />
+								<Text className='text-text-primary font-semibold mt-2'>
+									Progress
+								</Text>
+							</TouchableOpacity>
+						</TourStep>
 					</View>
 				</View>
 			</ScrollView>

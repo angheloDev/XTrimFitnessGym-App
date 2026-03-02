@@ -1,6 +1,7 @@
 import FixedView from '@/components/FixedView';
 import GradientButton from '@/components/GradientButton';
 import TabHeader from '@/components/TabHeader';
+import { TourStep } from '@/components/TourStep';
 import { useAuth } from '@/contexts/AuthContext';
 import type {
 	GetCurrentMembershipQuery,
@@ -240,6 +241,19 @@ const MemberSubscription = () => {
 					/>
 				}
 			>
+				<TourStep stepId='subscription'>
+					<View className='flex-row justify-between items-center mb-6'>
+						<View>
+							<Text className='text-3xl font-bold text-text-primary'>
+								Subscription
+							</Text>
+							<Text className='text-text-secondary mt-1'>
+								Your membership status
+							</Text>
+						</View>
+						<Ionicons name='card' size={32} color='#F9C513' />
+					</View>
+				</TourStep>
 				{currentSubscription ? (
 					<>
 						{/* Current Subscription Card */}
