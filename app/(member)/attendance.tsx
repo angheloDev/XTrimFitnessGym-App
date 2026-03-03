@@ -54,29 +54,17 @@ const MemberAttendance = () => {
 		return (data as any)?.getAttendanceRecords?.totalCount || 0;
 	}, [data]);
 
-	// Process records to force alternate IN/OUT directions starting with IN
-	const processedRecords = useMemo(() => {
-		// Sort all records chronologically (oldest first) to process them in order
-		const sorted = [...records].sort((a, b) => {
+	const sortedRecords = useMemo(() => {
+		return [...records].sort((a, b) => {
 			const dateTimeA = a.authDateTime || `${a.authDate}T${a.authTime || '00:00:00'}`;
 			const dateTimeB = b.authDateTime || `${b.authDate}T${b.authTime || '00:00:00'}`;
 			return new Date(dateTimeA).getTime() - new Date(dateTimeB).getTime();
 		});
-
-		// Process records to alternate direction: first is IN, then OUT, then IN, etc.
-		return sorted.map((record, index) => {
-			const direction = index % 2 === 0 ? 'IN' : 'OUT';
-			return {
-				...record,
-				direction,
-			};
-		});
 	}, [records]);
 
-	// Group processed records by date
 	const groupedRecords = useMemo(() => {
 		const grouped: Record<string, any[]> = {};
-		processedRecords.forEach((record: any) => {
+		sortedRecords.forEach((record: any) => {
 			const date = record.authDate || record.authDateTime?.split('T')[0];
 			if (date) {
 				if (!grouped[date]) {
@@ -101,7 +89,7 @@ const MemberAttendance = () => {
 		});
 
 		return { grouped, sortedDates };
-	}, [processedRecords]);
+	}, [sortedRecords]);
 
 	const formatDate = (dateString: string) => {
 		const date = new Date(dateString);
