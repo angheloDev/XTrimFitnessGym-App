@@ -133,7 +133,7 @@ const Login = () => {
 					<View className='items-center mb-6'>
 						<Image
 							// eslint-disable-next-line @typescript-eslint/no-require-imports
-							source={require('@/assets/logos/XTFG_logo.PNG')}
+							source={require('@/assets/logos/XTFG_logo.png')}
 							style={{ width: 200, height: 100 }}
 							contentFit='contain'
 						/>

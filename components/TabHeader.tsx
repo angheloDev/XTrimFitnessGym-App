@@ -143,7 +143,7 @@ const TabHeader: React.FC<TabHeaderProps> = ({ showCoachIcon = false }) => {
 					{/* Center - App Logo */}
 					<View className='flex-1 items-center'>
 						<Image
-							source={require('@/assets/logos/XTFG_logo.PNG')}
+							source={require('@/assets/logos/XTFG_logo.png')}
 							style={{ width: 120, height: 40 }}
 							contentFit='contain'
 						/>
