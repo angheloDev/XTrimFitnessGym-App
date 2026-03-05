@@ -57,7 +57,7 @@ const Login = () => {
 				console.error('Login completion error:', error);
 				Alert.alert(
 					'Error',
-					'Login successful, but failed to save session. Please try again.'
+					'Login successful, but failed to save session. Please try again.',
 				);
 			}
 		},
@@ -65,7 +65,7 @@ const Login = () => {
 			console.error('Login error:', error);
 			Alert.alert(
 				'Login Failed',
-				error.message || 'Please check your credentials and try again'
+				error.message || 'Please check your credentials and try again',
 			);
 		},
 	});
@@ -101,10 +101,14 @@ const Login = () => {
 
 		try {
 			// Quick connectivity hint: show the endpoint being used (from Apollo client logs)
-			console.log('🧪 [Login] Attempting login… if this fails with Network request failed, check:');
+			console.log(
+				'🧪 [Login] Attempting login… if this fails with Network request failed, check:',
+			);
 			console.log('   - API server is running');
 			console.log('   - Android emulator uses 10.0.2.2 for host localhost');
-			console.log('   - Physical device must use LAN IP in app.json (and Windows Firewall allows it)');
+			console.log(
+				'   - Physical device must use LAN IP in app.json (and Windows Firewall allows it)',
+			);
 			await login({
 				variables: {
 					input: {
@@ -128,12 +132,11 @@ const Login = () => {
 				<ScrollView
 					contentContainerClassName='flex-grow justify-center px-5 py-8'
 					keyboardShouldPersistTaps='handled'
-					showsVerticalScrollIndicator={false}
 				>
 					<View className='items-center mb-6'>
 						<Image
 							// eslint-disable-next-line @typescript-eslint/no-require-imports
-							source={require('@/assets/logos/XTFG_logo.png')}
+							source={require('@/assets/logos/XTFG_icon_1024.png')}
 							style={{ width: 200, height: 100 }}
 							contentFit='contain'
 						/>
