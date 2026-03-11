@@ -5,7 +5,6 @@ import Input from '@/components/Input';
 import Select from '@/components/Select';
 import TabHeader from '@/components/TabHeader';
 import TimePicker from '@/components/TimePicker';
-import { TourStep } from '@/components/TourStep';
 import { useAuth } from '@/contexts/AuthContext';
 import {
 	ASSIGN_COACH_TO_GOAL_MUTATION,
@@ -701,41 +700,37 @@ const CoachSchedule = () => {
 					/>
 				}
 			>
-				<TourStep stepId='schedule'>
-					<View className='mb-6 pb-4 border-b border-[#F9C513]' style={{ borderBottomWidth: 0.5 }}>
-						<View className='flex-row justify-between items-center mb-4'>
-							<Text className='text-3xl font-bold text-text-primary'>Schedule</Text>
-							<TourStep stepId='schedule_create'>
-								<GradientButton
-									onPress={() => setShowCreateModal(true)}
-									className='px-4 py-2 h-17 w-30'
-								>
-									<Ionicons name='add' size={30} color='#fff' />
-								</GradientButton>
-							</TourStep>
-						</View>
-						<View className='flex-row gap-2'>
-						<TouchableOpacity
-							onPress={() => setShowGoalsModal(true)}
-							className='flex-1 bg-[#F9C513] rounded-lg px-3 py-2 flex-row items-center justify-center min-h-[44] border border-[#1C1C1E]/20'
+				<View className='mb-6 pb-4 border-b border-[#F9C513]' style={{ borderBottomWidth: 0.5 }}>
+					<View className='flex-row justify-between items-center mb-4'>
+						<Text className='text-3xl font-bold text-text-primary'>Schedule</Text>
+						<GradientButton
+							onPress={() => setShowCreateModal(true)}
+							className='px-4 py-2 h-17 w-30'
 						>
-							<Ionicons name='flag' size={18} color='#1C1C1E' />
-							<Text className='text-bg-darker font-semibold ml-2 text-sm'>
-								Goals
-							</Text>
-						</TouchableOpacity>
-						<TouchableOpacity
-							onPress={() => setShowTemplatesModal(true)}
-							className='flex-1 bg-[#F9C513] rounded-lg px-3 py-2 flex-row items-center justify-center min-h-[44] border border-[#1C1C1E]/20'
-						>
-							<Ionicons name='copy' size={18} color='#1C1C1E' />
-							<Text className='text-bg-darker font-semibold ml-2 text-sm'>
-								Templates
-							</Text>
-						</TouchableOpacity>
+							<Ionicons name='add' size={30} color='#fff' />
+						</GradientButton>
 					</View>
+					<View className='flex-row gap-2'>
+					<TouchableOpacity
+						onPress={() => setShowGoalsModal(true)}
+						className='flex-1 bg-[#F9C513] rounded-lg px-3 py-2 flex-row items-center justify-center min-h-[44] border border-[#1C1C1E]/20'
+					>
+						<Ionicons name='flag' size={18} color='#1C1C1E' />
+						<Text className='text-bg-darker font-semibold ml-2 text-sm'>
+							Goals
+						</Text>
+					</TouchableOpacity>
+					<TouchableOpacity
+						onPress={() => setShowTemplatesModal(true)}
+						className='flex-1 bg-[#F9C513] rounded-lg px-3 py-2 flex-row items-center justify-center min-h-[44] border border-[#1C1C1E]/20'
+					>
+						<Ionicons name='copy' size={18} color='#1C1C1E' />
+						<Text className='text-bg-darker font-semibold ml-2 text-sm'>
+							Templates
+						</Text>
+					</TouchableOpacity>
 				</View>
-				</TourStep>
+			</View>
 
 				{myGoals.length > 0 && (
 					<View className='mb-4'>

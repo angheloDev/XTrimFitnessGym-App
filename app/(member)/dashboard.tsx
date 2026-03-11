@@ -1,6 +1,5 @@
 import FixedView from '@/components/FixedView';
 import TabHeader from '@/components/TabHeader';
-import { TourStep } from '@/components/TourStep';
 import { useAuth } from '@/contexts/AuthContext';
 import {
 	GetClientSessionsQuery,
@@ -148,20 +147,17 @@ const MemberDashboard = () => {
 					/>
 				}
 			>
-				<TourStep stepId='dashboard'>
-					<View className='mb-6'>
-						<Text className='text-3xl font-bold text-text-primary'>
-							Dashboard
-						</Text>
-						<Text className='text-text-secondary mt-1'>
-							Welcome back, {user?.firstName}!
-						</Text>
-					</View>
-				</TourStep>
+				<View className='mb-6'>
+					<Text className='text-3xl font-bold text-text-primary'>
+						Dashboard
+					</Text>
+					<Text className='text-text-secondary mt-1'>
+						Welcome back, {user?.firstName}!
+					</Text>
+				</View>
 
 				{/* Quick Stats */}
-				<TourStep stepId='quickstats'>
-					<View className='flex-row gap-3 mb-6'>
+				<View className='flex-row gap-3 mb-6'>
 						<View className='flex-1 bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20'>
 							<View className='flex-row items-center mb-2'>
 								<Ionicons name='calendar' size={18} color='#F9C513' />
@@ -185,7 +181,6 @@ const MemberDashboard = () => {
 							</Text>
 						</View>
 					</View>
-				</TourStep>
 
 				{/* Fitness Insights */}
 				<View className='bg-bg-primary rounded-xl p-5 mb-6 border border-[#F9C513]/20'>
@@ -283,13 +278,11 @@ const MemberDashboard = () => {
 									Active Goals
 								</Text>
 							</View>
-							<TourStep stepId='dashboard_view_goals'>
-								<TouchableOpacity
-									onPress={() => router.push('/(member)/progress')}
-								>
-									<Text className='text-[#F9C513] font-semibold'>View All</Text>
-								</TouchableOpacity>
-							</TourStep>
+							<TouchableOpacity
+								onPress={() => router.push('/(member)/progress')}
+							>
+								<Text className='text-[#F9C513] font-semibold'>View All</Text>
+							</TouchableOpacity>
 						</View>
 
 						<View className='bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20'>
@@ -438,28 +431,24 @@ const MemberDashboard = () => {
 						Quick Actions
 					</Text>
 					<View className='flex-row gap-3'>
-						<TourStep stepId='dashboard_quick_progress'>
-							<TouchableOpacity
-								onPress={() => router.push('/(member)/progress')}
-								className='flex-1 bg-bg-primary rounded-xl p-4 items-center border border-[#F9C513]/20'
-							>
-								<Ionicons name='trending-up' size={32} color='#F9C513' />
-								<Text className='text-text-primary font-semibold mt-2'>
-									Progress
-								</Text>
-							</TouchableOpacity>
-						</TourStep>
-						<TourStep stepId='dashboard_quick_subscription'>
-							<TouchableOpacity
-								onPress={() => router.push('/(member)/subscription')}
-								className='flex-1 bg-bg-primary rounded-xl p-4 items-center border border-[#F9C513]/20'
-							>
-								<Ionicons name='card' size={32} color='#F9C513' />
-								<Text className='text-text-primary font-semibold mt-2'>
-									Subscription
-								</Text>
-							</TouchableOpacity>
-						</TourStep>
+						<TouchableOpacity
+							onPress={() => router.push('/(member)/progress')}
+							className='flex-1 bg-bg-primary rounded-xl p-4 items-center border border-[#F9C513]/20'
+						>
+							<Ionicons name='trending-up' size={32} color='#F9C513' />
+							<Text className='text-text-primary font-semibold mt-2'>
+								Progress
+							</Text>
+						</TouchableOpacity>
+						<TouchableOpacity
+							onPress={() => router.push('/(member)/subscription')}
+							className='flex-1 bg-bg-primary rounded-xl p-4 items-center border border-[#F9C513]/20'
+						>
+							<Ionicons name='card' size={32} color='#F9C513' />
+							<Text className='text-text-primary font-semibold mt-2'>
+								Subscription
+							</Text>
+						</TouchableOpacity>
 					</View>
 				</View>
 			</ScrollView>

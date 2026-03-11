@@ -2,7 +2,6 @@ import CameraCapture from '@/components/CameraCapture';
 import FixedView from '@/components/FixedView';
 import GradientButton from '@/components/GradientButton';
 import TabHeader from '@/components/TabHeader';
-import { TourStep } from '@/components/TourStep';
 import { useAuth } from '@/contexts/AuthContext';
 import { GetClientSessionsQuery } from '@/graphql/generated/types';
 import {
@@ -10,11 +9,13 @@ import {
 	CREATE_COACH_RATING_MUTATION,
 } from '@/graphql/mutations';
 import { GET_CLIENT_SESSIONS_QUERY } from '@/graphql/queries';
+import { storage } from '@/utils/storage';
 import { formatTimeTo12Hour } from '@/utils/time-utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { Image as ExpoImage } from 'expo-image';
+import * as ImageManipulator from 'expo-image-manipulator';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
 	ActivityIndicator,
@@ -31,49 +32,33 @@ import {
 	View,
 } from 'react-native';
 
-// Get the API base URL (without /graphql) for image uploads
-// This should match the same logic as apollo-client.ts
-const getApiUrl = () => {
-	if (__DEV__) {
-		// Get API URL from app.json (if configured)
-		const configApiUrl = Constants.expoConfig?.extra?.apiUrl;
-		const isPhysicalDevice = Constants.isDevice;
+// Base API URL (no /graphql) for uploads - aligned with apollo-client
+const getUploadBaseUrl = () => {
+	const configApiUrl = Constants.expoConfig?.extra?.apiUrl;
+	const stripGraphql = (url: string) => url.replace(/\/graphql\/?$/, '') || url;
 
-		// Prefer config URL when available; patch localhost for Android emulator.
-		// Then strip /graphql because uploads use REST routes.
-		if (configApiUrl) {
-			if (Platform.OS === 'android' && !isPhysicalDevice) {
-				try {
-					const url = new URL(configApiUrl);
-					url.hostname = '10.0.2.2';
-					return url.toString().replace('/graphql', '');
-				} catch {
-					return configApiUrl.replace('/graphql', '');
-				}
+	if (configApiUrl) {
+		if (__DEV__ && Platform.OS === 'android' && !Constants.isDevice) {
+			try {
+				const u = new URL(configApiUrl);
+				u.hostname = '10.0.2.2';
+				return stripGraphql(u.toString());
+			} catch {
+				return stripGraphql(configApiUrl);
 			}
-			return configApiUrl.replace('/graphql', '');
 		}
-		
-		// Platform-specific URL logic
-		if (Platform.OS === 'android') {
-			// Android Emulator uses 10.0.2.2 to access host machine's localhost
-			return 'http://10.0.2.2:8000';
-		} else if (Platform.OS === 'ios') {
-			// iOS Simulator can use localhost directly
-			return 'http://localhost:8000';
-		} else if (Platform.OS === 'web') {
-			// Web platform - prefer config URL, fallback to localhost
-			return 'http://localhost:8000';
-		} else {
-			// Unknown platform - use config URL or fallback
-			// Fallback - this should ideally be set in app.json
-			return 'http://192.168.254.237:8000';
-		}
+		return stripGraphql(configApiUrl);
 	}
-	return 'https://your-production-api.com';
-};
 
-const API_BASE_URL = getApiUrl();
+	if (__DEV__) {
+		if (Platform.OS === 'android') return 'http://10.0.2.2:8000';
+		if (Platform.OS === 'ios') return 'http://localhost:8000';
+		if (Platform.OS === 'web') return 'http://localhost:8000';
+		return 'http://192.168.254.237:8000';
+	}
+
+	return 'https://xtrimfitgym-api.onrender.com';
+};
 
 type ImageAngle = 'front' | 'rightSide' | 'leftSide' | 'back';
 
@@ -266,7 +251,11 @@ const MemberSchedule = () => {
 		setShowCompletionModal(true);
 	};
 
+	const UPLOAD_TIMEOUT_MS = 60000; // 60s so upload + Cloudinary round-trip can finish
+
 	const uploadImageToCloudinary = async (imageUri: string): Promise<string> => {
+		if (!imageUri?.trim()) throw new Error('No image to upload');
+
 		const formData = new FormData();
 		formData.append('image', {
 			uri: imageUri,
@@ -275,20 +264,44 @@ const MemberSchedule = () => {
 		} as any);
 		formData.append('folder', 'XTrimFitGym/progress-images');
 
-		const response = await fetch(`${API_BASE_URL}/api/upload/image`, {
-			method: 'POST',
-			body: formData,
-		});
+		const baseUrl = getUploadBaseUrl();
+		const headers: Record<string, string> = {};
+		const token = await storage.getItem('auth_token');
+		if (token) headers.Authorization = `Bearer ${token}`;
 
-		if (!response.ok) {
-			const error = await response
-				.json()
-				.catch(() => ({ error: 'Failed to upload image' }));
-			throw new Error(error.error || 'Failed to upload image');
+		const controller = new AbortController();
+		const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+
+		try {
+			const response = await fetch(`${baseUrl}/api/upload/image`, {
+				method: 'POST',
+				headers,
+				body: formData,
+				signal: controller.signal,
+			});
+
+			clearTimeout(timeoutId);
+
+			if (!response.ok) {
+				const error = await response
+					.json()
+					.catch(() => ({ error: 'Failed to upload image' }));
+				throw new Error(error.error || 'Failed to upload image');
+			}
+
+			const data = await response.json();
+			return data.url;
+		} catch (err: any) {
+			clearTimeout(timeoutId);
+			if (err?.name === 'AbortError') {
+				throw new Error('Upload timed out. Check your connection and try again.');
+			}
+			const msg = err?.message || '';
+			if (/network|failed to fetch|connection|timeout|aborted/i.test(msg)) {
+				throw new Error('Connection problem. Check your network and try again.');
+			}
+			throw err;
 		}
-
-		const data = await response.json();
-		return data.url;
 	};
 
 	const handleImageCapture = async (uri: string) => {
@@ -296,13 +309,18 @@ const MemberSchedule = () => {
 		setUploading(true);
 
 		try {
-			const imageUrl = await uploadImageToCloudinary(uri);
+			const manipulated = await ImageManipulator.manipulateAsync(
+				uri,
+				[{ resize: { width: 1024 } }],
+				{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+			);
+			const imageUrl = await uploadImageToCloudinary(manipulated.uri);
 			setProgressImages((prev) => ({
 				...prev,
 				[currentAngle]: imageUrl,
 			}));
 		} catch (error: any) {
-			Alert.alert('Upload Error', error.message || 'Failed to upload image');
+			Alert.alert('Upload Error', error?.message || 'Failed to upload image');
 		} finally {
 			setUploading(false);
 		}
@@ -391,16 +409,14 @@ const MemberSchedule = () => {
 					/>
 				}
 			>
-				<TourStep stepId='schedule'>
-					<View className='mb-6'>
-						<Text className='text-3xl font-bold text-text-primary'>
-							Upcoming Sessions
-						</Text>
-						<Text className='text-text-secondary mt-1'>
-							Your scheduled workouts
-						</Text>
-					</View>
-				</TourStep>
+				<View className='mb-6'>
+					<Text className='text-3xl font-bold text-text-primary'>
+						Upcoming Sessions
+					</Text>
+					<Text className='text-text-secondary mt-1'>
+						Your scheduled workouts
+					</Text>
+				</View>
 				{loading ? (
 					<View className='items-center justify-center py-20'>
 						<Text className='text-text-secondary'>Loading...</Text>

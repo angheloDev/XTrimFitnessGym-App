@@ -11,7 +11,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import NotificationsDrawer from './NotificationsDrawer';
 import ProfileDropdown from './ProfileDropdown';
-import { TourStep } from './TourStep';
 
 interface TabHeaderProps {
 	showCoachIcon?: boolean;
@@ -124,17 +123,15 @@ const TabHeader: React.FC<TabHeaderProps> = ({ showCoachIcon = false }) => {
 					{/* Left side - Coach icon (only for members) */}
 					<View className='flex-1'>
 						{showCoachIcon ? (
-							<TourStep stepId='header_coaches'>
-								<TouchableOpacity
-									onPress={handleCoachPress}
-									className='flex-row items-center'
-								>
-									<View className='bg-bg-primary rounded-full p-1'>
-										<Ionicons name='people' size={20} color='#F9C513' />
-									</View>
-									<Text className='text-text-primary font-semibold'>Coaches</Text>
-								</TouchableOpacity>
-							</TourStep>
+							<TouchableOpacity
+								onPress={handleCoachPress}
+								className='flex-row items-center'
+							>
+								<View className='bg-bg-primary rounded-full p-1'>
+									<Ionicons name='people' size={20} color='#F9C513' />
+								</View>
+								<Text className='text-text-primary font-semibold'>Coaches</Text>
+							</TouchableOpacity>
 						) : (
 							<View />
 						)}
@@ -151,49 +148,45 @@ const TabHeader: React.FC<TabHeaderProps> = ({ showCoachIcon = false }) => {
 
 					{/* Right side - Notifications and Profile */}
 					<View className='flex-1 flex-row items-center justify-end gap-3'>
-						<TourStep stepId='header_notifications'>
-							<TouchableOpacity
-								onPress={() => setShowNotifications(true)}
-								className='relative'
+						<TouchableOpacity
+							onPress={() => setShowNotifications(true)}
+							className='relative'
+						>
+							<Animated.View
+								style={{
+									transform: [{ translateX: shakeAnim }],
+								}}
 							>
-								<Animated.View
-									style={{
-										transform: [{ translateX: shakeAnim }],
-									}}
-								>
-									<Ionicons name='notifications-outline' size={24} color='#F9C513' />
-								</Animated.View>
-								{totalNotificationCount > 0 && (
-									<View className='absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[18px] h-[18px] items-center justify-center px-1'>
-										<Text className='text-white text-xs font-bold'>
-											{totalNotificationCount > 9 ? '9+' : totalNotificationCount}
-										</Text>
-									</View>
-								)}
-							</TouchableOpacity>
-						</TourStep>
+								<Ionicons name='notifications-outline' size={24} color='#F9C513' />
+							</Animated.View>
+							{totalNotificationCount > 0 && (
+								<View className='absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[18px] h-[18px] items-center justify-center px-1'>
+									<Text className='text-white text-xs font-bold'>
+										{totalNotificationCount > 9 ? '9+' : totalNotificationCount}
+									</Text>
+								</View>
+							)}
+						</TouchableOpacity>
 
-						<TourStep stepId='header_profile'>
-							<TouchableOpacity
-								onPress={() => setShowProfileDropdown(!showProfileDropdown)}
-								className='relative'
-							>
-								{user?.firstName ? (
-									<View className='bg-[#F9C513] rounded-full w-8 h-8 items-center justify-center'>
+						<TouchableOpacity
+							onPress={() => setShowProfileDropdown(!showProfileDropdown)}
+							className='relative'
+						>
+							{user?.firstName ? (
+								<View className='bg-[#F9C513] rounded-full w-8 h-8 items-center justify-center'>
 									<Text className='text-bg-darker font-bold text-sm'>
 										{user.firstName.charAt(0).toUpperCase() +
 											user?.lastName?.charAt(0).toUpperCase() || ''}
 									</Text>
-									</View>
-								) : (
-									<Ionicons
-										name='person-circle-outline'
-										size={32}
-										color='#F9C513'
-									/>
-								)}
-							</TouchableOpacity>
-						</TourStep>
+								</View>
+							) : (
+								<Ionicons
+									name='person-circle-outline'
+									size={32}
+									color='#F9C513'
+								/>
+							)}
+						</TouchableOpacity>
 					</View>
 				</View>
 			</View>

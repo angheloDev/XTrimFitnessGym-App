@@ -1,5 +1,4 @@
 import FixedView from '@/components/FixedView';
-import { TourStep } from '@/components/TourStep';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
@@ -328,21 +327,19 @@ const MemberWorkouts = () => {
 
 	return (
 		<FixedView className='flex-1 bg-bg-darker px-4' extraTopPadding={16}>
-			<TourStep stepId='workouts'>
-				<View style={styles.header}>
-					<View style={styles.headerRow}>
-						<View style={styles.headerTextGroup}>
-							<Text style={styles.title}>Workouts</Text>
-							<Text style={styles.subtitle}>
-								Explore guided exercises and train with the built-in timer.
-							</Text>
-						</View>
-						<View style={styles.headerPill}>
-							<Text style={styles.headerPillText}>Free access</Text>
-						</View>
+			<View style={styles.header}>
+				<View style={styles.headerRow}>
+					<View style={styles.headerTextGroup}>
+						<Text style={styles.title}>Workouts</Text>
+						<Text style={styles.subtitle}>
+							Explore guided exercises and train with the built-in timer.
+						</Text>
+					</View>
+					<View style={styles.headerPill}>
+						<Text style={styles.headerPillText}>Free access</Text>
 					</View>
 				</View>
-			</TourStep>
+			</View>
 
 			{!canFetch ? (
 				<View style={styles.center}>
@@ -367,20 +364,18 @@ const MemberWorkouts = () => {
 				</View>
 			) : (
 				<>
-					<TourStep stepId='workouts_search'>
-						<View style={styles.searchRow}>
-							<TextInput
-								placeholder='Search by name, body part, or target muscle'
-								placeholderTextColor='#8E8E93'
-								value={search}
-								onChangeText={setSearch}
-								style={styles.searchInput}
-							/>
-						{isGlobalSearchLoading && (
-							<ActivityIndicator size='small' color='#F9C513' />
-						)}
-						</View>
-					</TourStep>
+					<View style={styles.searchRow}>
+						<TextInput
+							placeholder='Search by name, body part, or target muscle'
+							placeholderTextColor='#8E8E93'
+							value={search}
+							onChangeText={setSearch}
+							style={styles.searchInput}
+						/>
+					{isGlobalSearchLoading && (
+						<ActivityIndicator size='small' color='#F9C513' />
+					)}
+					</View>
 
 					{categories.length > 0 && (
 						<View style={styles.categoriesContainer}>

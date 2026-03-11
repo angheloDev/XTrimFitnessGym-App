@@ -114,8 +114,10 @@ const getApiUrl = () => {
 		}
 	}
 
-	// Production URL
-	return 'https://your-production-api.com/graphql';
+	// Production: use extra.apiUrl from app.json (baked in at build time)
+	const configApiUrl = Constants.expoConfig?.extra?.apiUrl;
+	if (configApiUrl) return configApiUrl;
+	return 'https://xtrimfitgym-api.onrender.com/graphql';
 };
 
 const API_URL = getApiUrl();

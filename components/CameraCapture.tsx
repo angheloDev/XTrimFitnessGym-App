@@ -115,7 +115,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
 		setIsCapturing(true);
 		try {
 			const photo = await cameraRef.current.takePictureAsync({
-				quality: 0.8,
+				quality: 0.6,
 				base64: false,
 			});
 

@@ -1,6 +1,5 @@
 import FixedView from '@/components/FixedView';
 import TabHeader from '@/components/TabHeader';
-import { TourStep } from '@/components/TourStep';
 import { useAuth } from '@/contexts/AuthContext';
 import {
 	GET_COACH_SESSIONS_QUERY,
@@ -418,20 +417,17 @@ const CoachDashboard = () => {
 					/>
 				}
 			>
-				<TourStep stepId='dashboard'>
-					<View className='mb-6'>
-						<Text className='text-3xl font-bold text-text-primary'>
-							Dashboard
-						</Text>
-						<Text className='text-text-secondary mt-1'>
-							Welcome back, Coach {user?.firstName}!
-						</Text>
-					</View>
-				</TourStep>
+				<View className='mb-6'>
+					<Text className='text-3xl font-bold text-text-primary'>
+						Dashboard
+					</Text>
+					<Text className='text-text-secondary mt-1'>
+						Welcome back, Coach {user?.firstName}!
+					</Text>
+				</View>
 
 				{/* Quick Stats */}
-				<TourStep stepId='quickstats'>
-					<View className='flex-row gap-3 mb-6'>
+				<View className='flex-row gap-3 mb-6'>
 						<View className='flex-1 bg-bg-primary rounded-xl p-4 border border-[#F9C513]/20'>
 							<View className='flex-row items-center mb-2'>
 								<Ionicons name='calendar' size={18} color='#F9C513' />
@@ -455,7 +451,6 @@ const CoachDashboard = () => {
 							</Text>
 						</View>
 					</View>
-				</TourStep>
 
 				{/* Coach Performance Insights */}
 				<View className='bg-bg-primary rounded-xl p-5 mb-6 border border-[#F9C513]/20'>
@@ -703,28 +698,24 @@ const CoachDashboard = () => {
 						Quick Actions
 					</Text>
 					<View className='flex-row gap-3 flex-wrap'>
-						<TourStep stepId='dashboard_quick_schedule'>
-							<TouchableOpacity
-								onPress={() => router.push('/(coach)/schedule')}
-								className='flex-1 min-w-[45%] bg-bg-primary rounded-xl p-4 items-center border border-[#F9C513]/20'
-							>
-								<Ionicons name='calendar' size={32} color='#F9C513' />
-								<Text className='text-text-primary font-semibold mt-2'>
-									Schedule
-								</Text>
-							</TouchableOpacity>
-						</TourStep>
-						<TourStep stepId='dashboard_quick_progress'>
-							<TouchableOpacity
-								onPress={() => router.push('/(coach)/progress')}
-								className='flex-1 min-w-[45%] bg-bg-primary rounded-xl p-4 items-center border border-[#F9C513]/20'
-							>
-								<Ionicons name='trending-up' size={32} color='#F9C513' />
-								<Text className='text-text-primary font-semibold mt-2'>
-									Progress
-								</Text>
-							</TouchableOpacity>
-						</TourStep>
+						<TouchableOpacity
+							onPress={() => router.push('/(coach)/schedule')}
+							className='flex-1 min-w-[45%] bg-bg-primary rounded-xl p-4 items-center border border-[#F9C513]/20'
+						>
+							<Ionicons name='calendar' size={32} color='#F9C513' />
+							<Text className='text-text-primary font-semibold mt-2'>
+								Schedule
+							</Text>
+						</TouchableOpacity>
+						<TouchableOpacity
+							onPress={() => router.push('/(coach)/progress')}
+							className='flex-1 min-w-[45%] bg-bg-primary rounded-xl p-4 items-center border border-[#F9C513]/20'
+						>
+							<Ionicons name='trending-up' size={32} color='#F9C513' />
+							<Text className='text-text-primary font-semibold mt-2'>
+								Progress
+							</Text>
+						</TouchableOpacity>
 					</View>
 				</View>
 			</ScrollView>
